@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/07/21 13:02:35 by cbach             #+#    #+#             */
-/*   Updated: 2020/07/22 22:38:08 by cbach            ###   ########.fr       */
+/*   Updated: 2020/07/23 21:16:08 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@ char	*str_dup(char *s)
 
 	if (!(len = str_len(s)))
 		return (NULL);
-	if (!(t = ft_calloc(sizeof(char) * (len + 1))))
+	if (!(t = ft_calloc(sizeof(char), (len + 1))))
 		return (NULL);
 	bt = t;
 	while (s && *s)
@@ -54,7 +54,7 @@ char	*str_join(char *s1, char *s2, int length)
 	char *begin;
 	char *oldbegin;
 
-	if (!(out = ft_calloc(sizeof(char) * (length + 1))))
+	if (!(out = ft_calloc(sizeof(char), (length + 1))))
 		return (NULL);
 	begin = out;
 	oldbegin = s1;
@@ -75,7 +75,6 @@ int		read_line(int fd, char **line, char *buf, char **buffer_remains)
 
 	temp = NULL;
 	status = str_len(buf);
-	//в цикле идет reading of freed memory (buf) надо попробовать избавиться от него
 	while ((index = str_line_len(buf)) > 0)
 	{
 		if (!(temp = str_join(temp, buf, str_len(buf) + str_len(temp))))
@@ -83,12 +82,11 @@ int		read_line(int fd, char **line, char *buf, char **buffer_remains)
 		else
 		{
 			free(buf);
-			buf = ft_calloc(sizeof(char) * (BUFFER_SIZE + 1));
+			buf = ft_calloc(sizeof(char), (BUFFER_SIZE + 1));
 			status = read(fd, buf, BUFFER_SIZE);
 		}
 	}
 	*buffer_remains = str_dup(&buf[1 - index]);
-	//ошибка снизу - в том, что если буф = "" и темп = нуль то внутри стрджоин все равно аллокейтится память, хотя у скарру выдает пустую строку
 	*line = str_join(temp, buf, str_len(temp) - index);
 	return (destroy(buf, NULL, NULL, status));
 }
@@ -98,9 +96,11 @@ int		get_next_line(int fd, char **line)
 	static char	*buffer_remains[FD_MAX_COUNT];
 	char		*buf;
 	int			status;
+	int			buf_size;
 
+	buf_size = BUFFER_SIZE;
 	status = 1;
-	if (fd > FD_MAX_COUNT || BUFFER_SIZE < 1 || read(fd, buffer_remains[fd], 0))
+	if (fd > FD_MAX_COUNT || buf_size < 1 || read(fd, buffer_remains[fd], 0))
 		status = -1;
 	if (buffer_remains[fd])
 	{
@@ -114,7 +114,7 @@ int		get_next_line(int fd, char **line)
 	}
 	else
 		status = read(fd,
-		buf = ft_calloc(sizeof(unsigned char) * (BUFFER_SIZE + 1)), BUFFER_SIZE);
+		buf = ft_calloc(sizeof(unsigned char), (buf_size + 1)), buf_size);
 	return (status != -1 ? read_line(fd, line, buf, &buffer_remains[fd])
 	: destroy(buf, NULL, NULL, status));
 }
