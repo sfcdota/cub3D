@@ -6,13 +6,25 @@
 
 #IncludeRegexTransform: 
 
-/Users/cbach/Desktop/cub3D/get_next_line.c
-get_next_line.h
-/Users/cbach/Desktop/cub3D/get_next_line.h
-
-/Users/cbach/Desktop/cub3D/get_next_line.h
+/Users/cbach/Desktop/cub3D/cub3D.h
+stdlib.h
+-
 unistd.h
 -
 stdlib.h
 -
+
+/Users/cbach/Desktop/cub3D/main.c
+fcntl.h
+-
+stdio.h
+-
+string.h
+-
+errno.h
+-
+stdlib.h
+-
+cub3D.h
+/Users/cbach/Desktop/cub3D/cub3D.h
 

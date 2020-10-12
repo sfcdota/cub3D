@@ -10,20 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "get_next_line.h"
-
-void	*ft_calloc(size_t n, size_t f)
-{
-	unsigned char *s;
-	unsigned char *b;
-
-	if (!(s = (unsigned char *)malloc(n * f)))
-		return (NULL);
-	b = s;
-	while (n--)
-		*s++ = '\0';
-	return (b);
-}
+#include "cub3D.h"
 
 int		str_len(const char *s)
 {

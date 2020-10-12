@@ -126,10 +126,9 @@ CMakeFiles/cub3D.dir/ft_toupper.c.o: ../ft_toupper.c
 CMakeFiles/cub3D.dir/get_next_line.c.o: ../get_next_line.c
 CMakeFiles/cub3D.dir/get_next_line.c.o: ../get_next_line.h
 
-CMakeFiles/cub3D.dir/get_next_line_utils.c.o: ../get_next_line.h
+CMakeFiles/cub3D.dir/get_next_line_utils.c.o: ../cub3D.h
 CMakeFiles/cub3D.dir/get_next_line_utils.c.o: ../get_next_line_utils.c
 
-CMakeFiles/cub3D.dir/main.c.o: ../get_next_line.h
-CMakeFiles/cub3D.dir/main.c.o: ../libft.h
+CMakeFiles/cub3D.dir/main.c.o: ../cub3D.h
 CMakeFiles/cub3D.dir/main.c.o: ../main.c
 
