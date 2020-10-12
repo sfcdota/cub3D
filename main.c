@@ -327,6 +327,7 @@ int		parse(t_mi *mi, char *filename)
 
 	fd = open(filename, O_RDONLY);
 	line = NULL;
+	status = 1;
 	while (status && mi->error < 0 && (status = get_next_line(fd, &line)) > 0)
 	{
 		if (*(temp = next_non_space(line)) && *temp != '1')
