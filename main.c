@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "cub3D.h"
-
+#include <stdio.h>
 int		is_in_set(char c, char const *set)
 {
 	while (*set)
@@ -129,12 +129,11 @@ char	*parse_path(char *begin, char *end)
 	return (temp);
 }
 
-void	parse_r(char *line, t_mi *mi)
+void	parse_r(char **line, t_mi *mi)
 {
-	mi->resolution[0] = ft_atoi_modified(&line);
-	mi->resolution[1] = ft_atoi_modified(&line);
-	line = next_non_space(line);
-	if (mi->resolution[0] * mi->resolution[1] == 0 || *line)
+	mi->resolution[0] = ft_atoi_modified(line);
+	mi->resolution[1] = ft_atoi_modified(line);
+	if (mi->resolution[0] * mi->resolution[1] == 0 || **line)
 		mi->error = 0;
 }
 
@@ -187,23 +186,23 @@ void	parse_color(char *line, t_mi *mi, int color_index)
 		mi->error = 0;
 }
 
-void	parse_flag(char *line, t_mi *mi, int fd, char *filename)
+void	parse_flag(char **line, t_mi *mi, int fd, char *filename)
 {
-	if (*line == 'R')
+	if (**line == 'R')
 		parse_r(line, mi);
-	if (*line == 'F')
+	if (**line == 'F')
 		parse_color(line, mi, 0);
-	if (*line == 'C')
+	if (**line == 'C')
 		parse_color(line, mi, 1);
-	if (*line == 'N' && *(line + sizeof(char) * 1) == 'O')
+	if (**line == 'N' && *(line + sizeof(char) * 1) == 'O')
 		parse_textures(line, mi, 0);
-	if (*line == 'S' && *(line + sizeof(char) * 1) == 'O')
+	if (**line == 'S' && *(line + sizeof(char) * 1) == 'O')
 		parse_textures(line, mi, 1);
-	if (*line == 'W' && *(line + sizeof(char) * 1) == 'E')
+	if (**line == 'W' && *(line + sizeof(char) * 1) == 'E')
 		parse_textures(line, mi, 2);
-	if (*line == 'E' && *(line + sizeof(char) * 1) == 'A')
+	if (**line == 'E' && *(line + sizeof(char) * 1) == 'A')
 		parse_textures(line, mi, 3);
-	if (*line == 'S' && *(line + sizeof(char) * 1) != 'O')
+	if (**line == 'S' && *(line + sizeof(char) * 1) != 'O')
 		parse_textures(line, mi, 4);
 }
 
@@ -265,7 +264,7 @@ int		parse_map(char *line, t_mi *mi, int fd)
 
 	while (status > 0)
 	{
-		status = get_line_info(line, &directions, mi->max_line_length, mi->lines);
+		status = get_line_info(line, &directions, &mi->max_line_length, &mi->lines);
 		ft_lstadd_back(&map_list, ft_lstnew(line));
 		free(line);
 		if (status > 0)
@@ -331,7 +330,7 @@ int		parse(t_mi *mi, char *filename)
 	while (status && mi->error < 0 && (status = get_next_line(fd, &line)) > 0)
 	{
 		if (*(temp = next_non_space(line)) && *temp != '1')
-			parse_flag(temp, mi, fd, filename);
+			parse_flag(&temp, mi, fd, filename);
 		else if (*temp == '1')
 			status = parse_map(line, mi, fd);
 		free(line);
@@ -350,9 +349,9 @@ t_mi	*initialize_mi(t_mi *mi)
 	mi->lines = 0;
 	mi->map_list = NULL;
 	mi->map = NULL;
-	mi->colors = NULL;
-	mi->textures = NULL;
-	mi->resolution = NULL;
+	mi->colors = malloc(sizeof(int) * 2);
+	mi->textures = malloc(sizeof(char *) * 5);
+	mi->resolution = malloc (sizeof(int) * 2);
 	mi->error = -100;
 	mi->isShared = 0;
 	return (mi);
@@ -391,16 +390,22 @@ int main (int argc, char **argv)
 //							"12. filename length > 255",
 //						};
 	int status;
-	t_mi mi;
+	t_mi temp;
+	t_mi *mi = &temp;
 	status = 0;
 	if (argc == 2 || argc == 3)
 	{
-		status = parse(initialize_mi(&mi), argv[1]);
-		if (ft_strncmp("--shared", argv[2], 10))
-			mi.isShared = 1;
+		status = parse(initialize_mi(mi), argv[1]);
+		if (argc == 3 && ft_strncmp("--shared", argv[2], 10))
+			mi->isShared = 1;
 	}
 	else
 		status = 0;
-
+	int i = 0;
+	while (i < mi->max_line_length)
+	{
+		printf("%s\n", mi->map[i]);
+		i++;
+	}
 	return (0);
 }

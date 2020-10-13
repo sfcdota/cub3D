@@ -12,12 +12,11 @@
 
 #ifndef CUB3D_H
 # define CUB3D_H
-# include <stdlib.h>
 # ifndef FD_MAX_COUNT
 #  define FD_MAX_COUNT 1024
 # endif
 # ifndef BUFFER_SIZE
-#  define BUFFER_SIZE 0
+#  define BUFFER_SIZE 128
 # endif
 # include <unistd.h>
 # include <stdlib.h>
