@@ -1,8 +1,69 @@
-cmake_minimum_required(VERSION 3.12)
-set(CMAKE_C_STANDARD 99)
-#-Wall -Wextra -Werror
-set(CMAKE_C_FLAGS "-L /usr/local/lib -lmlx -framework OpenGL -framework AppKit")
-include_directories(/usr/local/include)
-file(GLOB srcs "*.c")
+cmake_minimum_required(VERSION 3.16)
+project(cub3D)
 
-add_executable(cub3D ${srcs} cub3D.h)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_C_FLAGS "-D BUFFER_SIZE=128")
+include_directories(.)
+
+add_executable(cub3D
+        .idea/codeStyles/codeStyleConfig.xml
+        .idea/codeStyles/Project.xml
+        .idea/vcs.xml
+        .idea/workspace.xml
+        cmake-build-debug/cmake_install.cmake
+        cmake-build-debug/CMakeCache.txt
+        cmake-build-debug/cub3D
+        cmake-build-debug/Makefile
+        cmake-build-debug/Project.cbp
+        CMakeLists.txt
+        cub3D.h
+        ft_atoi.c
+        ft_bzero.c
+        ft_calloc.c
+        ft_isalnum.c
+        ft_isalpha.c
+        ft_isascii.c
+        ft_isdigit.c
+        ft_isprint.c
+        ft_itoa.c
+        ft_lstadd_back.c
+        ft_lstadd_front.c
+        ft_lstclear.c
+        ft_lstdelone.c
+        ft_lstiter.c
+        ft_lstlast.c
+        ft_lstmap.c
+        ft_lstnew.c
+        ft_lstsize.c
+        ft_memccpy.c
+        ft_memchr.c
+        ft_memcmp.c
+        ft_memcpy.c
+        ft_memmove.c
+        ft_memset.c
+        ft_putchar_fd.c
+        ft_putendl_fd.c
+        ft_putnbr_fd.c
+        ft_putstr_fd.c
+        ft_split.c
+        ft_strchr.c
+        ft_strdup.c
+        ft_strjoin.c
+        ft_strlcat.c
+        ft_strlcpy.c
+        ft_strlen.c
+        ft_strmapi.c
+        ft_strncmp.c
+        ft_strnstr.c
+        ft_strrchr.c
+        ft_strtrim.c
+        ft_substr.c
+        ft_tolower.c
+        ft_toupper.c
+        get_next_line.c
+        get_next_line.h
+        get_next_line_utils.c
+        i.cub
+        libft.h
+        main.c
+        "minilibx info")
