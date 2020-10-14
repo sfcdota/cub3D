@@ -6,13 +6,13 @@
 
 #IncludeRegexTransform: 
 
-/mnt/c/Users/sfcdo/CLionProjects/cub3D/cub3D.h
+/Users/cbach/Desktop/cub3D/cub3D.h
 unistd.h
 -
 stdlib.h
 -
 
-/mnt/c/Users/sfcdo/CLionProjects/cub3D/main.c
+/Users/cbach/Desktop/cub3D/main.c
 fcntl.h
 -
 stdio.h
@@ -24,7 +24,7 @@ errno.h
 stdlib.h
 -
 cub3D.h
-/mnt/c/Users/sfcdo/CLionProjects/cub3D/cub3D.h
+/Users/cbach/Desktop/cub3D/cub3D.h
 stdio.h
 -
 

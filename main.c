@@ -25,6 +25,20 @@ int		is_in_set(char c, char const *set)
 	return (0);
 }
 
+int 	set_index(char c, char const *set)
+{
+	int index;
+
+	index = 0;
+	while (*set)
+	{
+		if (c == *set++)
+			return index;
+		index++;
+	}
+	return (-1);
+}
+
 int 	is_space(char c)
 {
 	return (c > 6 && c < 14) || c == 32 ? 1 : 0;
@@ -44,51 +58,47 @@ char 	*next_non_space(char *line)
 
 char	*next_till_space(char *line)
 {
-	while (!is_space(*line))
+	while (*line && !is_space(*line))
 		line++;
 	return (line);
 }
 
 
-int			ft_atoi_modified(char **nptr)
+int			ft_atoi_modified(char **ptr)
 {
 	int	i;
 	int error;
-	char *ptr;
 
 	error = 0;
-	ptr = *nptr;
 	i = 0;
-	while (is_space(*ptr))
-		ptr++;
-	while (is_digit(*ptr))
+	while (is_space(**ptr))
+		(*ptr)++;
+	while (is_digit(**ptr))
 		if (i > 1000000000)
 			error = -1;
 		else
-			i = i * 10 + (*ptr++ - 48);
+			i = i * 10 + (*(*ptr)++ - 48);
 	return error ? -1 : i;
 }
 
-int			ft_atoi_color(char **nptr)
+int			ft_atoi_color(char **ptr)
 {
 	int	i;
 	int error;
-	char *ptr;
 
 	error = 0;
-	ptr = *nptr;
 	i = 0;
-	while (is_space(*ptr))
-		ptr++;
-	while (is_digit(*ptr))
+	while (is_space(**ptr))
+		(*ptr)++;
+	while (is_digit(**ptr))
 		if (i > 255)
 			error = -1;
 		else
-			i = i * 10 + (*ptr++ - 48);
-	if (*ptr == '.')
-		while (is_digit(*ptr))
-			ptr++;
-	ptr = next_non_space(ptr);
+			i = i * 10 + (*(*ptr)++ - 48);
+	if (**ptr == '.')
+		while (is_digit(**ptr))
+			(*ptr)++;
+	*ptr = next_non_space(*ptr);
 	return error ? -1 : i;
 }
 
@@ -110,6 +120,7 @@ typedef struct		s_mi
 	int				max_line_length;
 	char			**map;
 	int				error;
+	int 			direction; // n = 0, s = 1, w = 2, e = 3
 	int				isShared;
 }					t_mi;
 
@@ -131,56 +142,59 @@ char	*parse_path(char *begin, char *end)
 
 void	parse_r(char **line, t_mi *mi)
 {
+	*line += sizeof(char) * 1;
 	mi->resolution[0] = ft_atoi_modified(line);
 	mi->resolution[1] = ft_atoi_modified(line);
 	if (mi->resolution[0] * mi->resolution[1] == 0 || **line)
 		mi->error = 0;
 }
 
-void	parse_textures(char *line, t_mi *mi, int texture_index)
+void	parse_textures(char **line, t_mi *mi, int texture_index)
 {
 	char *temp;
 
-	line = next_non_space(line);
-	temp = line;
-	line = next_non_space(line);
-	if (*line != '\0')
+	*line += sizeof(char) * (texture_index < 4 ? 2 : 1);
+	*line = next_non_space(*line);
+	temp = *line;
+	*line = next_till_space(*line);
+	if (**line != '\0')
 	{
 		mi->error = 11;
 		return ;
 	}
-	if (line - temp > 255)
+	if (*line - temp > 255)
 	{
 		mi->error = 12;
 		return ;
 	}
-	if ((temp = parse_path(temp, line)) == NULL)
+	if ((temp = parse_path(temp, *line)) == NULL)
 		mi->error = 10;
 	else
 		mi->textures[texture_index] = temp;
 }
 
-void	parse_color(char *line, t_mi *mi, int color_index)
+void	parse_color(char **line, t_mi *mi, int color_index)
 {
 	int color;
 	int multiplier;
 	int temp;
 
+	*line += sizeof(char) * 1;
 	multiplier = 1000000;
 	color = 0;
-	while (multiplier && line)
+	while (multiplier && *line)
 	{
-		if ((temp = ft_atoi_color(&line)) >= 0)
+		if ((temp = ft_atoi_color(line)) >= 0)
 		{
 			color += temp * multiplier;
 			multiplier /= 1000;
-			if (*line == ',' && multiplier)
-				line++;
-			else if (*line)
-					line = NULL;
+			if (**line == ',' && multiplier)
+				(*line)++;
+			else if (**line)
+					*line = NULL;
 		}
 	}
-	if (line)
+	if (*line)
 		mi->colors[color_index] = color;
 	else
 		mi->error = 0;
@@ -194,15 +208,15 @@ void	parse_flag(char **line, t_mi *mi, int fd, char *filename)
 		parse_color(line, mi, 0);
 	if (**line == 'C')
 		parse_color(line, mi, 1);
-	if (**line == 'N' && *(line + sizeof(char) * 1) == 'O')
+	if (**line == 'N' && *(*line + sizeof(char) * 1) == 'O')
 		parse_textures(line, mi, 0);
-	if (**line == 'S' && *(line + sizeof(char) * 1) == 'O')
+	if (**line == 'S' && *(*line + sizeof(char) * 1) == 'O')
 		parse_textures(line, mi, 1);
-	if (**line == 'W' && *(line + sizeof(char) * 1) == 'E')
+	if (**line == 'W' && *(*line + sizeof(char) * 1) == 'E')
 		parse_textures(line, mi, 2);
-	if (**line == 'E' && *(line + sizeof(char) * 1) == 'A')
+	if (**line == 'E' && *(*line + sizeof(char) * 1) == 'A')
 		parse_textures(line, mi, 3);
-	if (**line == 'S' && *(line + sizeof(char) * 1) != 'O')
+	if (**line == 'S' && *(*line + sizeof(char) * 1) != 'O')
 		parse_textures(line, mi, 4);
 }
 
@@ -224,12 +238,12 @@ int 	correct_sides_and_spaces(char *line)
 	end = line;
 	if (*(begin - 1) != '1' && *(end + 1) != '1')
 		correct = 0;
-	while (correct && begin < end)
-	{
-		if (is_space(*begin))
-			correct = 0;
-		begin++;
-	}
+//	while (correct && begin < end)
+//	{
+//		if (is_space(*begin))
+//			correct = 0;
+//		begin++;
+//	}
 	return (correct);
 }
 
@@ -240,12 +254,12 @@ int 	get_line_info(char *line, int *directions, int *max_width, int *lines)
 	if (correct_sides_and_spaces(line))
 	{
 		counter = 0;
-		*lines = (*lines)++;
+		*lines += 1;
 		while (*line)
 		{
 			counter++;
 			if (is_in_set(*line, "NSEW"))
-				directions++;
+				*directions += 1;
 			line++;
 		}
 		if (*max_width < counter)
@@ -256,23 +270,58 @@ int 	get_line_info(char *line, int *directions, int *max_width, int *lines)
 	return -2;
 }
 
-int		parse_map(char *line, t_mi *mi, int fd)
+//int		parse_map(char **line, t_mi *mi, int fd)
+//{
+//	int directions;
+//	int status = 1;
+//	t_list *temp;
+//
+//	directions = 0;
+//	mi->map_list = NULL;
+//	while (status > 0 && *next_non_space(*line) != '\0')
+//	{
+//		status = get_line_info(*line, &directions, &mi->max_line_length, &mi->lines);
+//		if (!(temp = ft_lstnew(ft_strdup(*line))))
+//			return -1;
+//		ft_lstadd_back(&mi->map_list, temp);
+//		free(*line);
+//		if (status > 0)
+//			status = get_next_line(fd, line);
+//	}
+//	while (*next_non_space(*line) == '\0' && status > 0)
+//		status = get_next_line(fd, line);
+//	if (status < 0 || *next_non_space(*line) != '\0')
+//		mi->error = 0;
+//	return (0);
+//}
+
+
+int		parse_map(char **line, t_mi *mi, int fd)
 {
-	t_list *map_list;
-	int directions;
 	int status = 1;
+	t_list *temp;
+	int len;
 
-	while (status > 0)
+	mi->map_list = NULL;
+	while (status > 0 && *next_non_space(*line) != '\0')
 	{
-		status = get_line_info(line, &directions, &mi->max_line_length, &mi->lines);
-		ft_lstadd_back(&map_list, ft_lstnew(line));
-		free(line);
+		mi->lines++;
+		len = ft_strlen(*line);
+		if (mi->max_line_length < len)
+			mi->max_line_length = len;
+		if (!(temp = ft_lstnew(ft_strdup(*line))))
+			return -1;
+		ft_lstadd_back(&mi->map_list, temp);
+		free(*line);
 		if (status > 0)
-			status = get_next_line(fd, &line);
+			status = get_next_line(fd, line);
 	}
-	return status;
+	while (*next_non_space(*line) == '\0' && status > 0)
+		status = get_next_line(fd, line);
+	if (status < 0 || *next_non_space(*line) != '\0')
+		mi->error = 0;
+	return (0);
 }
-
 
 
 char	*line_copy(int width, char *src)
@@ -281,7 +330,8 @@ char	*line_copy(int width, char *src)
 	int j;
 
 	j = 0;
-	dest = malloc(width + 1);
+	if(!(dest = malloc(width + 1)))
+		return NULL;
 	while (j < width)
 	{
 		dest[j] = *src ? *src++ : ' ';
@@ -297,24 +347,58 @@ void	del(void *content)
 	content = NULL;
 }
 
-void	map_list_to_array(t_mi *mi)
+int check_map(t_mi *mi)
+{
+	int i;
+	int j;
+
+	i = 0;
+	while (i < mi->lines)
+	{
+		j = 0;
+		while (j < mi->max_line_length)
+		{
+			if (is_in_set(mi->map[i][j], "NSWE"))
+			{
+				if (mi->direction != -1)
+					return (-1);
+				else
+					mi->direction = set_index(mi->map[i][j], "NSWE");
+			}
+			if (j == 0 || j == mi->max_line_length - 1 || i == 0 || i == mi->lines - 1)
+			{
+				if (is_in_set(mi->map[i][j], "NSWE0"))
+					return (-1);
+			}
+			else if (mi->map[i - 1][j] == ' ' || mi->map[i + 1][j] == ' ' || mi->map[i][j - 1] == ' ' || mi->map[i][j + 1] == ' ')
+					return (-1);
+			j++;
+		}
+		i++;
+	}
+	return (1);
+}
+
+int	map_list_to_array(t_mi *mi)
 {
 	char **map;
 	int i;
-	int j;
 	t_list *map_list;
 
 	map_list = mi->map_list;
 	i = 0;
-	map = malloc(sizeof(char *) * mi->lines);
+	if(!(map = malloc(sizeof(char *) * mi->lines)))
+		return -1;
 	while (i < mi->lines)
 	{
-		map[i] = line_copy(mi->max_line_length, (char *)map_list->content);
+		if(!(map[i] = line_copy(mi->max_line_length, (char *)map_list->content)))
+			return -1;
 		map_list = map_list->next;
 		i++;
 	}
 	ft_lstclear(&(mi->map_list), del);
 	mi->map = map;
+	return check_map(mi);
 }
 
 int		parse(t_mi *mi, char *filename)
@@ -332,14 +416,15 @@ int		parse(t_mi *mi, char *filename)
 		if (*(temp = next_non_space(line)) && *temp != '1')
 			parse_flag(&temp, mi, fd, filename);
 		else if (*temp == '1')
-			status = parse_map(line, mi, fd);
+			status = parse_map(&line, mi, fd);
 		free(line);
+		line = NULL;
 	}
 	close(fd);
 	if (status < 0) // -1 = read error, other = msges
 		mi->error = 10;
 	else
-		map_list_to_array(mi);
+		status = map_list_to_array(mi);
 	return status;
 }
 
@@ -354,6 +439,7 @@ t_mi	*initialize_mi(t_mi *mi)
 	mi->resolution = malloc (sizeof(int) * 2);
 	mi->error = -100;
 	mi->isShared = 0;
+	mi->direction = -1;
 	return (mi);
 }
 
@@ -400,12 +486,27 @@ int main (int argc, char **argv)
 			mi->isShared = 1;
 	}
 	else
-		status = 0;
-	int i = 0;
-	while (i < mi->max_line_length)
+		status = -1;
+	if (status == -1)
+		printf("there is an error ... ERROR CODE = %d\n", status);
+	else
 	{
-		printf("%s\n", mi->map[i]);
-		i++;
+		int i = 0;
+		while (i < mi->lines) {
+			printf("%s\n", mi->map[i]);
+			i++;
+		}
+		printf("\n\n\n\nwidth = %d\t height = %d\n"
+			   "no texture = %s\n"
+			   "so texture = %s\n"
+			   "we texture = %s\n"
+			   "ea texture = %s\n"
+			   "s texture = %s\n"
+			   "f color = %d \n"
+			   "c color = %d \n"
+			   "isShared = %d\n", mi->resolution[0], mi->resolution[1],
+			   mi->textures[0], mi->textures[1], mi->textures[2], mi->textures[3],
+			   mi->textures[4], mi->colors[0], mi->colors[1], mi->isShared);
 	}
 	return (0);
 }
