@@ -488,7 +488,7 @@ int main (int argc, char **argv)
 	else
 		status = -1;
 	if (status == -1)
-		printf("there is an error ... ERROR CODE = %d\n", status);
+		printf("there is an error ... ERROR CODE = %d\n", status); //ERROR NA PARSINGE!!!!!
 	else
 	{
 		int i = 0;
