@@ -152,6 +152,8 @@ void	parse_r(char **line, t_mi *mi)
 void	parse_textures(char **line, t_mi *mi, int texture_index)
 {
 	char *temp;
+	char *t;
+	int fd;
 
 	*line += sizeof(char) * (texture_index < 4 ? 2 : 1);
 	*line = next_non_space(*line);
@@ -167,10 +169,20 @@ void	parse_textures(char **line, t_mi *mi, int texture_index)
 		mi->error = 12;
 		return ;
 	}
-	if ((temp = parse_path(temp, *line)) == NULL)
+	temp = parse_path(temp, *line);
+	fd = open(temp, O_RDONLY);
+	if (read(fd, t, 10) < 0)
+	{
+		free(temp);
+		temp = NULL;
 		mi->error = 10;
+	}
 	else
+	{
+		free(t);
 		mi->textures[texture_index] = temp;
+	}
+	close(fd);
 }
 
 void	parse_color(char **line, t_mi *mi, int color_index)
@@ -365,13 +377,15 @@ int check_map(t_mi *mi)
 				else
 					mi->direction = set_index(mi->map[i][j], "NSWE");
 			}
-			if (j == 0 || j == mi->max_line_length - 1 || i == 0 || i == mi->lines - 1)
+			if (is_in_set(mi->map[i][j], "NSWE0"))
 			{
-				if (is_in_set(mi->map[i][j], "NSWE0"))
+				if (j == 0 || j == mi->max_line_length - 1 || i == 0 ||
+					i == mi->lines - 1)
+					return (-1);
+				else if (mi->map[i - 1][j] == ' ' || mi->map[i + 1][j] == ' ' ||
+						 mi->map[i][j - 1] == ' ' || mi->map[i][j + 1] == ' ')
 					return (-1);
 			}
-			else if (mi->map[i - 1][j] == ' ' || mi->map[i + 1][j] == ' ' || mi->map[i][j - 1] == ' ' || mi->map[i][j + 1] == ' ')
-					return (-1);
 			j++;
 		}
 		i++;
@@ -487,7 +501,7 @@ int main (int argc, char **argv)
 	}
 	else
 		status = -1;
-	if (status == -1)
+	if (status == -1 || mi->error >= 0)
 		printf("there is an error ... ERROR CODE = %d\n", status); //ERROR NA PARSINGE!!!!!
 	else
 	{
