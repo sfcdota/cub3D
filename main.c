@@ -31,7 +31,8 @@ typedef struct		s_mi
 	double				max_line_length;
 	char			**map;
 	int				error;
-	double			*ppos; //x = 0; y = 1
+	double			x;
+	double 			y;//x = 0; y = 1
 	double 			angle;
 	int				isShared;
 	double			step;
@@ -59,8 +60,8 @@ void 	set_angle(t_mi *mi, int i, int j)
 		direction = 2;
 	if (mi->map[i][j] == 'S')
 		direction = 3;
-	mi->ppos[0] = j;
-	mi->ppos[1] = i;
+	mi->x = j;
+	mi->y = i;
 	mi->angle = direction * M_PI_2;
 }
 
@@ -382,7 +383,7 @@ int check_map(t_mi *mi)
 					return (-1);
 		}
 	}
-	mi->map[(int)mi->ppos[1]][(int)mi->ppos[0]] = '0';
+	mi->map[(int)mi->y][(int)mi->x] = '0';
 	return (1);
 }
 
@@ -417,7 +418,7 @@ int 	check_map_info(t_mi *mi)
 	{
 		if (i < 2)
 		{
-			if (mi->colors[i] == -1 || mi->resolution[i] == -1 || mi->ppos[i] == -1)
+			if (mi->colors[i] == -1 || mi->resolution[i] == -1 || mi->x == -1 || mi->y == -1)
 				return (-1);
 		}
 		if (mi->textures[i] == NULL)
@@ -472,14 +473,14 @@ void	initialize_mi(t_mi *mi)
 	mi->colors = malloc(sizeof(int) * 2);
 	mi->textures = malloc(sizeof(char *) * 5);
 	mi->resolution = malloc (sizeof(int) * 2);
-	mi->ppos = malloc (sizeof(double) * 2);
+	mi->x = -1;
+	mi->y = -1;
 	while (++i < 5)
 	{
 		if (i < 2)
 		{
 			mi->colors[i] = -1;
 			mi->resolution[i] = -1;
-			mi->ppos[i] = -1;
 		}
 		mi->textures[i] = NULL;
 	}
@@ -507,7 +508,7 @@ int print_info(t_mi *mi)
 		j = 0;
 		while (j < mi->max_line_length)
 		{
-			printf("%c", i == (int) mi->ppos[1] && j == (int) mi->ppos[0] ? 'x'
+			printf("%c", i == (int) mi->y && j == (int) mi->x ? 'x'
 																		  : mi->map[i][j]);
 			j++;
 		}
@@ -526,7 +527,7 @@ int print_info(t_mi *mi)
 	 "ppos[0] = %lf\t ppos[1] = %lf\n"
   "angle = %lf\n", mi->resolution[0], mi->resolution[1],
 		   mi->textures[0], mi->textures[1], mi->textures[2], mi->textures[3],
-		   mi->textures[4], mi->colors[0], mi->colors[1], mi->isShared, mi->ppos[0], mi->ppos[1], mi->angle);
+		   mi->textures[4], mi->colors[0], mi->colors[1], mi->isShared, mi->x, mi->y, mi->angle);
 }
 
 void	print_map(t_mi *mi)
@@ -538,7 +539,7 @@ void	print_map(t_mi *mi)
 		j = 0;
 		while (j < mi->max_line_length)
 		{
-			printf("%c", i == (int) mi->ppos[1] && j == (int) mi->ppos[0] ? 'x'
+			printf("%c", i == (int) mi->y && j == (int) mi->x ? 'x'
 																		  : mi->map[i][j]);
 			j++;
 		}
@@ -546,7 +547,7 @@ void	print_map(t_mi *mi)
 		i++;
 	}
 	printf("ppos[0] = %lf\t ppos[1] = %lf\n"
-		"angle = %lf", mi->ppos[0], mi->ppos[1], mi->angle);
+		"angle = %lf", mi->x, mi->y, mi->angle);
 }
 
 void 	clear_mi(t_mi *mi)
@@ -561,8 +562,6 @@ void 	clear_mi(t_mi *mi)
 		if (i < 5 && mi->textures[i])
 			free(mi->textures[i]);
 	}
-	if (mi->ppos)
-		free(mi->ppos);
 	if (mi->resolution)
 		free(mi->resolution);
 	if(mi->colors)
@@ -600,30 +599,76 @@ int import_config(int argc, char **argv, t_mi *mi, double step)
 
 
 
+
+
 int key_pressed(int key, t_mi *mi)
 {
 	double multiplier;
+	double x_step;
+	double y_step;
 
-	multiplier = key == 13 || key == 0 ? 1 : -1;
-	if (key == 13 || key == 1)
+	multiplier = key == 13 || key == 0 ? mi->step : -mi->step;
+//	if (key == 13 || key == 1)
+//	{
+//		x_step = cos(mi->angle) * multiplier;
+//		y_step = -sin(mi->angle) * multiplier;
+//	}
+//	if (key == 0 || key == 2)
+//	{
+//		x_step = cos(mi->angle + M_PI_2) * multiplier;
+//		y_step = sin(mi->angle + M_PI_2) * multiplier;
+//	}
+	if (key == 13 || key == 1 || key == 0 || key == 2)
 	{
-		mi->ppos[0] += cos(mi->angle) * mi->step * multiplier;
-		mi->ppos[1] -= sin(mi->angle) * mi->step * multiplier;
-	}
-	if (key == 0 || key == 2)
-	{
-		mi->ppos[0] += cos(mi->angle + M_PI_2) * mi->step * multiplier;
-		mi->ppos[1] += sin(mi->angle + M_PI_2) * mi->step * multiplier;
+		x_step = multiplier * cos(mi->angle + (key == 13 || key == 1 ? 0 : M_PI_2));
+		y_step = multiplier * sin(-mi->angle +(key == 13 || key == 1 ? 0 : 3 * M_PI_2));
+		if (mi->map[(int)(mi->y + y_step)][(int)(mi->x)] == '0')
+			mi->y += y_step;
+		if (mi->map[(int)(mi->y)][(int)(mi->x + x_step)] == '0')
+			mi->x += x_step;
 	}
 	if (key == 123)
 		mi->angle += 0.1;
 	if (key == 124)
 		mi->angle -= 0.1;
-	system("clear");
+//	if (key == 53)
+//		return (-1);
 	print_map(mi);
-	return(0);
+	return(1);
 }
 
+double length_to_barrier(t_mi *mi, double angle) // + for wall | - for sprite
+{
+	double bar_x;
+	double bar_y;
+
+	bar_x = mi->x;
+	bar_y = mi->y;
+	while (is_in_set(mi->map[(int)bar_y][(int)bar_x], "0 "))
+	{
+		bar_x = bar_x + (angle);
+		bar_y -= bar_x * tan(angle);
+	}
+
+}
+
+void	ray_casting(void *mlx, void *win, t_mi *mi)
+{
+	int i;
+	int j;
+	double view_angle_ray;
+	i = -1;
+	while (++i <= mi->resolution[0])
+	{
+		view_angle_ray = mi->angle + M_PI_4 - i * M_PI_2 / mi->resolution[0]; //меняется от вью + пи/4 до вью - пи/4 (90 градусов)
+		j = -1;
+		while (++j <= mi->resolution[1])
+		{
+
+		}
+	}
+
+}
 void draw(t_mi *mi)
 {
 	void 	*mlx;
@@ -632,7 +677,11 @@ void draw(t_mi *mi)
 
 	mlx = mlx_init();
 	win = mlx_new_window(mlx, mi->resolution[0], mi->resolution[1], "cub3D");
-	mlx_key_hook(win, key_pressed, mi);
+	if (mlx_key_hook(win, key_pressed, mi) == -1)
+	{
+		mlx_destroy_window(mlx, win);
+		clear_mi(mi);
+	}
 
 	loop = mlx_loop(mlx);
 }
