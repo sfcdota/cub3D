@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
+/*   By: cbach <cbach@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/10/12 15:55:36 by cbach             #+#    #+#             */
-/*   Updated: 2020/10/12 20:05:57 by cbach            ###   ########.fr       */
+/*   Updated: 2020/10/22 22:23:47 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <mlx.h>
 #include <math.h>
-
 
 typedef struct		s_mi
 {
@@ -532,8 +531,10 @@ int print_info(t_mi *mi)
 
 void	print_map(t_mi *mi)
 {
-	int i = 0;
-	int j = 0;
+	int i;
+	int j;
+
+	i = 0;
 	while (i < mi->lines)
 	{
 		j = 0;
@@ -665,32 +666,134 @@ double length_to_barrier(t_mi *mi, double angle) // + for wall | - for sprite
 		}
 		i += dy;
 	}
-	while(mi->map[by][bx] == '0')
+}
+
+
+typedef struct		s_ri
+{
+	int mapX;
+	int mapY;
+	double posX;
+	double posY;
+	double dirX;
+	double dirY;
+	double planeX;
+	double planeY;
+	double sideDistX;
+	double sideDistY;
+	double deltaDistX;
+	double deltaDistY;
+	double dist;
+	int stepX;
+	int stepY;
+	int hit;
+	int side;
+
+}					t_ri;
+
+void	initialize_ray(t_mi *mi, t_ri *ri)
+{
+	ri->posX = mi->x;
+	ri->posY = mi->y;
+	ri->dirX = cos(mi->x);
+	ri->dirY = sin(mi->y);
+	ri->planeX = 0;
+	ri->planeY = 0.66;
+	ri->hit = 0;
 
 }
 
-void	ray_casting(void *mlx, void *win, t_mi *mi)
+void test(t_mi *mi, t_ri *ri)
 {
-	int i;
-	int j;
-	double view_angle_ray;
-	double dist;
-	int color;
-
-	i = 0;
-	while (++i <= mi->resolution[0])
+	int x;
+	initialize_ray(mi, ri);
+	while(1)
 	{
-		view_angle_ray = mi->angle + M_PI_4 - i * M_PI_2 / mi->resolution[0]; //меняется от вью + пи/4 до вью - пи/4 (90 градусов)
-		dist = length_to_barrier(mi, view_angle_ray);
-		j = 0;
-		while (++j <= mi->resolution[1])
+		x = -1;
+		while(++x < mi->resolution[0])
 		{
-			color = j < (mi->resolution - dist) / 2 || s
-			mlx_pixel_put(mlx, win, i, j, 255000000);
+			double cameraX = 2 * x / (double)mi->resolution[0] - 1;
+			double rayDirX = ri->dirX + ri->planeX * cameraX;
+			double rayDirY = ri->dirY + ri->planeY * cameraX;
+			ri->mapX = (int)ri->posX;
+			ri->mapY = (int)ri->posY;
+			ri->deltaDistX = abs(1/rayDirX);
+			ri->deltaDistY = abs(1/rayDirY);
+			if (rayDirX < 0)
+			{
+				ri->stepX = -1;
+				ri->sideDistX = (ri->posX - ri->mapX) * ri->deltaDistX;
+			}
+			else
+			{
+				ri->stepX = 1;
+				ri->sideDistX = (ri->mapX + 1.0 - ri->posX) * ri->deltaDistX;
+			}
+			if (rayDirY < 0)
+			{
+				ri->stepY = -1;
+				ri->sideDistY = (ri->posY - ri->mapY) * ri->deltaDistY;
+			}
+			else
+			{
+				ri->stepY = 1;
+				ri->sideDistY = (ri->mapY + 1.0 - ri->posY) * ri->deltaDistY;
+			}
+			while (!ri->hit)
+			{
+				if (ri->sideDistX < ri->sideDistY)
+				{
+					ri->sideDistX += ri->deltaDistX;
+					ri->mapX += ri->stepX;
+					ri->side = 0;
+				}
+				else
+				{
+					ri->sideDistY += ri->deltaDistY;
+					ri->mapY += ri->stepY;
+					ri->side = 1;
+				}
+				if (mi->map[ri->mapY][ri->mapX])
+					ri->hit = mi->map[ri->mapY][ri->mapX];
+			}
+			if (!ri->side)
+				ri->dist = (ri->mapX - ri->posX + (1 - ri->stepX) / 2) rayDirX;
+			else
+				ri->dist = (ri->mapY - ri->posY + (1 - ri->stepY) / 2) / rayDirY;
+			int lineHeight = (int)(mi->resolution[1] / ri->dist);
+			int drawStart = -lineHeight / 2 + mi->resolution[1] / 2;
+			if (drawStart < 0)
+				drawStart = 0;
+			int drawEnd = lineHeight / 2 + mi->resolution[1] / 2;
+			if (drawEnd >= mi->resolution[0])
+				drawEnd = mi->resolution[0] - 1;
+			//draw func
 		}
 	}
-
 }
+
+//void	ray_casting(void *mlx, void *win, t_mi *mi)
+//{
+//	int i;
+//	int j;
+//	double view_angle_ray;
+//	double dist;
+//	int color;
+//
+//	i = 0;
+//	while (++i <= mi->resolution[0])
+//	{
+//		view_angle_ray = mi->angle + M_PI_4 - i * M_PI_2 / mi->resolution[0]; //меняется от вью + пи/4 до вью - пи/4 (90 градусов)
+//		dist = length_to_barrier(mi, view_angle_ray);
+//		j = 0;
+//		while (++j <= mi->resolution[1])
+//		{
+//			color = j < (mi->resolution - dist) / 2 || s
+//			mlx_pixel_put(mlx, win, i, j, 255000000);
+//		}
+//	}
+//
+//}
 void draw(t_mi *mi)
 {
 	void 	*mlx;
@@ -704,10 +807,7 @@ void draw(t_mi *mi)
 		mlx_destroy_window(mlx, win);
 		clear_mi(mi);
 	}
-	while(1)
-	{
-		ray_casting(mlx, win, mi);
-	}
+
 
 	loop = mlx_loop(mlx);
 }
