@@ -691,6 +691,14 @@ typedef struct		s_ri
 
 }					t_ri;
 
+
+typedef struct		s_mlx
+{
+    void *mlx;
+    void *win;
+
+}					t_mlx;
+
 void	initialize_ray(t_mi *mi, t_ri *ri)
 {
 	ri->posX = mi->x;
@@ -703,7 +711,21 @@ void	initialize_ray(t_mi *mi, t_ri *ri)
 
 }
 
-void test(t_mi *mi, t_ri *ri)
+void    test_draw(t_mi *mi, t_mlx *mlx, int draw_start, int draw_end, int cur_ray)
+{
+    int i;
+
+    i = -1;
+    while (++i < mi->resolution[1])
+    {
+        if (i >= draw_start && i <= draw_end)
+            mlx_pixel_put(mlx->mlx, mlx->win, cur_ray, i, 255000000);
+        else
+            mlx_pixel_put(mlx->mlx, mlx->win, cur_ray, i, 255);
+    }
+}
+
+void test(t_mi *mi, t_ri *ri, t_mlx *mlx)
 {
 	int x;
 	initialize_ray(mi, ri);
@@ -767,7 +789,7 @@ void test(t_mi *mi, t_ri *ri)
 			int drawEnd = lineHeight / 2 + mi->resolution[1] / 2;
 			if (drawEnd >= mi->resolution[0])
 				drawEnd = mi->resolution[0] - 1;
-			//draw func
+			test_draw(mi, mlx, drawStart, drawEnd, x);
 		}
 	}
 }
@@ -796,12 +818,14 @@ void test(t_mi *mi, t_ri *ri)
 //}
 void draw(t_mi *mi)
 {
-	void 	*mlx;
 	void 	*win;
+	t_mlx   mlx;
 	int		loop;
-
-	mlx = mlx_init();
-	win = mlx_new_window(mlx, mi->resolution[0], mi->resolution[1], "cub3D");
+    t_ri    ri;
+    initialize_ray(mi, &ri);
+	mlx.mlx = mlx_init();
+	mlx.win = mlx_new_window(mlx, mi->resolution[0], mi->resolution[1], "cub3D");
+	test(mi, &ri, mlx);
 	if (mlx_key_hook(win, key_pressed, mi) == -1)
 	{
 		mlx_destroy_window(mlx, win);
