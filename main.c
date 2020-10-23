@@ -779,7 +779,7 @@ void test(t_mi *mi, t_ri *ri, t_mlx *mlx)
 					ri->hit = mi->map[ri->mapY][ri->mapX];
 			}
 			if (!ri->side)
-				ri->dist = (ri->mapX - ri->posX + (1 - ri->stepX) / 2) rayDirX;
+				ri->dist = (ri->mapX - ri->posX + (1 - ri->stepX) / 2) / rayDirX;
 			else
 				ri->dist = (ri->mapY - ri->posY + (1 - ri->stepY) / 2) / rayDirY;
 			int lineHeight = (int)(mi->resolution[1] / ri->dist);
@@ -824,16 +824,18 @@ void draw(t_mi *mi)
     t_ri    ri;
     initialize_ray(mi, &ri);
 	mlx.mlx = mlx_init();
-	mlx.win = mlx_new_window(mlx, mi->resolution[0], mi->resolution[1], "cub3D");
-	test(mi, &ri, mlx);
-	if (mlx_key_hook(win, key_pressed, mi) == -1)
-	{
-		mlx_destroy_window(mlx, win);
-		clear_mi(mi);
-	}
+	mlx.win = mlx_new_window(mlx.mlx, mi->resolution[0], mi->resolution[1], "cub3D");
+    mlx_key_hook(mlx.win, key_pressed, mi);
+    loop = mlx_loop(mlx.mlx);
+
+    test(mi, &ri, &mlx);
+//	if (mlx_key_hook(win, key_pressed, mi) == -1)
+//	{
+//		mlx_destroy_window(mlx.mlx, win);
+//		clear_mi(mi);
+//	}
 
 
-	loop = mlx_loop(mlx);
 }
 
 
