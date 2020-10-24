@@ -60,7 +60,7 @@ void 	set_angle(t_mi *mi, int i, int j)
 	if (mi->map[i][j] == 'S')
 		direction = 3;
 	mi->x = j;
-	mi->y = -i;
+	mi->y = i;
 	mi->angle = direction * M_PI_2;
 }
 
@@ -382,7 +382,7 @@ int check_map(t_mi *mi)
 					return (-1);
 		}
 	}
-	mi->map[(int)(-mi->y)][(int)mi->x] = '0';
+	mi->map[(int)(mi->y)][(int)mi->x] = '0';
 	return (1);
 }
 
@@ -417,7 +417,7 @@ int 	check_map_info(t_mi *mi)
 	{
 		if (i < 2)
 		{
-			if (mi->colors[i] == -1 || mi->resolution[i] == -1 || mi->x == -1 || mi->y == 1)
+			if (mi->colors[i] == -1 || mi->resolution[i] == -1 || mi->x == -1 || mi->y == -1)
 				return (-1);
 		}
 		if (mi->textures[i] == NULL)
@@ -473,7 +473,7 @@ void	initialize_mi(t_mi *mi)
 	mi->textures = malloc(sizeof(char *) * 5);
 	mi->resolution = malloc (sizeof(int) * 2);
 	mi->x = -1;
-	mi->y = 1;
+	mi->y = -1;
 	while (++i < 5)
 	{
 		if (i < 2)
@@ -507,7 +507,7 @@ int print_info(t_mi *mi)
 		j = 0;
 		while (j < mi->max_line_length)
 		{
-			printf("%c", i == (int)(-mi->y) && j == (int) mi->x ? 'x'
+			printf("%c", i == (int)(mi->y) && j == (int) mi->x ? 'x'
 																		  : mi->map[i][j]);
 			j++;
 		}
@@ -540,7 +540,7 @@ void	print_map(t_mi *mi)
 		j = 0;
 		while (j < mi->max_line_length)
 		{
-			printf("%c", i == (int)(-mi->y) && j == (int) mi->x ? 'x'
+			printf("%c", i == (int)(mi->y) && j == (int) mi->x ? 'x'
 																		  : mi->map[i][j]);
 			j++;
 		}
@@ -602,41 +602,31 @@ int import_config(int argc, char **argv, t_mi *mi, double step)
 
 
 
-int key_pressed(int key, t_mi *mi)
-{
-	double multiplier;
-	double x_step;
-	double y_step;
-
-	multiplier = key == 13 || key == 0 ? mi->step : -mi->step;
-//	if (key == 13 || key == 1)
+//int key_pressed(int key, t_mi *mi)
+//{
+//	double multiplier;
+//	double x_step;
+//	double y_step;
+//
+//	multiplier = key == 13 || key == 0 ? mi->step : -mi->step;
+//	if (key == 13 || key == 1 || key == 0 || key == 2)
 //	{
-//		x_step = cos(mi->angle) * multiplier;
-//		y_step = -sin(mi->angle) * multiplier;
+//		x_step = multiplier * cos(mi->angle + (key == 13 || key == 1 ? 0 : M_PI_2));
+//		y_step = multiplier * sin(mi->angle +(key == 13 || key == 1 ? 0 : 3 * M_PI_2));
+//		if (mi->map[(int)(-(mi->y + y_step))][(int)(mi->x)] == '0')
+//			mi->y += y_step;
+//		if (mi->map[(int)(-mi->y)][(int)(mi->x + x_step)] == '0')
+//			mi->x += x_step;
 //	}
-//	if (key == 0 || key == 2)
-//	{
-//		x_step = cos(mi->angle + M_PI_2) * multiplier;
-//		y_step = sin(mi->angle + M_PI_2) * multiplier;
-//	}
-	if (key == 13 || key == 1 || key == 0 || key == 2)
-	{
-		x_step = multiplier * cos(mi->angle + (key == 13 || key == 1 ? 0 : M_PI_2));
-		y_step = multiplier * sin(mi->angle +(key == 13 || key == 1 ? 0 : 3 * M_PI_2));
-		if (mi->map[(int)(-(mi->y + y_step))][(int)(mi->x)] == '0')
-			mi->y += y_step;
-		if (mi->map[(int)(-mi->y)][(int)(mi->x + x_step)] == '0')
-			mi->x += x_step;
-	}
-	if (key == 123)
-		mi->angle += 0.1;
-	if (key == 124)
-		mi->angle -= 0.1;
-//	if (key == 53)
-//		return (-1);
-	print_map(mi);
-	return(1);
-}
+//	if (key == 123)
+//		mi->angle += 0.1;
+//	if (key == 124)
+//		mi->angle -= 0.1;
+////	if (key == 53)
+////		return (-1);
+//	print_map(mi);
+//	return(1);
+//}
 
 double 	my_abs(double x)
 {
@@ -692,107 +682,104 @@ typedef struct		s_ri
 }					t_ri;
 
 
+
+
 typedef struct		s_mlx
 {
     void *mlx;
     void *win;
+    void *img;
 
 }					t_mlx;
 
+typedef struct		s_ha
+{
+	t_ri *ri;
+	t_mi *mi;
+	t_mlx *mlx;
+}					t_ha;
+
 void	initialize_ray(t_mi *mi, t_ri *ri)
 {
-	ri->posX = mi->x;
-	ri->posY = mi->y;
-	ri->dirX = cos(mi->x);
-	ri->dirY = sin(mi->y);
+	ri->posX = mi->y;
+	ri->posY = mi->x;
+	ri->dirX = -1;
+	ri->dirY = 0;
 	ri->planeX = 0;
 	ri->planeY = 0.66;
 	ri->hit = 0;
-
 }
 
-void    test_draw(t_mi *mi, t_mlx *mlx, int draw_start, int draw_end, int cur_ray)
-{
-    int i;
 
-    i = -1;
-    while (++i < mi->resolution[1])
-    {
-        if (i >= draw_start && i <= draw_end)
-            mlx_pixel_put(mlx->mlx, mlx->win, cur_ray, i, 255000000);
-        else
-            mlx_pixel_put(mlx->mlx, mlx->win, cur_ray, i, 255);
-    }
-}
 
-void test(t_mi *mi, t_ri *ri, t_mlx *mlx)
-{
-	int x;
-	initialize_ray(mi, ri);
-	while(1)
-	{
-		x = -1;
-		while(++x < mi->resolution[0])
-		{
-			double cameraX = 2 * x / (double)mi->resolution[0] - 1;
-			double rayDirX = ri->dirX + ri->planeX * cameraX;
-			double rayDirY = ri->dirY + ri->planeY * cameraX;
-			ri->mapX = (int)ri->posX;
-			ri->mapY = (int)ri->posY;
-			ri->deltaDistX = abs(1/rayDirX);
-			ri->deltaDistY = abs(1/rayDirY);
-			if (rayDirX < 0)
-			{
-				ri->stepX = -1;
-				ri->sideDistX = (ri->posX - ri->mapX) * ri->deltaDistX;
-			}
-			else
-			{
-				ri->stepX = 1;
-				ri->sideDistX = (ri->mapX + 1.0 - ri->posX) * ri->deltaDistX;
-			}
-			if (rayDirY < 0)
-			{
-				ri->stepY = -1;
-				ri->sideDistY = (ri->posY - ri->mapY) * ri->deltaDistY;
-			}
-			else
-			{
-				ri->stepY = 1;
-				ri->sideDistY = (ri->mapY + 1.0 - ri->posY) * ri->deltaDistY;
-			}
-			while (!ri->hit)
-			{
-				if (ri->sideDistX < ri->sideDistY)
-				{
-					ri->sideDistX += ri->deltaDistX;
-					ri->mapX += ri->stepX;
-					ri->side = 0;
-				}
-				else
-				{
-					ri->sideDistY += ri->deltaDistY;
-					ri->mapY += ri->stepY;
-					ri->side = 1;
-				}
-				if (mi->map[ri->mapY][ri->mapX])
-					ri->hit = mi->map[ri->mapY][ri->mapX];
-			}
-			if (!ri->side)
-				ri->dist = (ri->mapX - ri->posX + (1 - ri->stepX) / 2) / rayDirX;
-			else
-				ri->dist = (ri->mapY - ri->posY + (1 - ri->stepY) / 2) / rayDirY;
-			int lineHeight = (int)(mi->resolution[1] / ri->dist);
-			int drawStart = -lineHeight / 2 + mi->resolution[1] / 2;
-			if (drawStart < 0)
-				drawStart = 0;
-			int drawEnd = lineHeight / 2 + mi->resolution[1] / 2;
-			if (drawEnd >= mi->resolution[0])
-				drawEnd = mi->resolution[0] - 1;
-			test_draw(mi, mlx, drawStart, drawEnd, x);
-		}
-	}
-}
+//void test(t_ha *ha)
+//{
+//	int x;
+//	initialize_ray(mi, ri);
+//	while(1)
+//	{
+//		x = -1;
+//		while(++x < mi->resolution[0])
+//		{
+//			double cameraX = 2 * x / (double)mi->resolution[0] - 1;
+//			double rayDirX = ri->dirX + ri->planeX * cameraX;
+//			double rayDirY = ri->dirY + ri->planeY * cameraX;
+//			ri->mapX = (int)ri->posX;
+//			ri->mapY = (int)ri->posY;
+//			ri->deltaDistX = abs(1/rayDirX);
+//			ri->deltaDistY = abs(1/rayDirY);
+//			if (rayDirX < 0)
+//			{
+//				ri->stepX = -1;
+//				ri->sideDistX = (ri->posX - ri->mapX) * ri->deltaDistX;
+//			}
+//			else
+//			{
+//				ri->stepX = 1;
+//				ri->sideDistX = (ri->mapX + 1.0 - ri->posX) * ri->deltaDistX;
+//			}
+//			if (rayDirY < 0)
+//			{
+//				ri->stepY = -1;
+//				ri->sideDistY = (ri->posY - ri->mapY) * ri->deltaDistY;
+//			}
+//			else
+//			{
+//				ri->stepY = 1;
+//				ri->sideDistY = (ri->mapY + 1.0 - ri->posY) * ri->deltaDistY;
+//			}
+//			while (!ri->hit)
+//			{
+//				if (ri->sideDistX < ri->sideDistY)
+//				{
+//					ri->sideDistX += ri->deltaDistX;
+//					ri->mapX += ri->stepX;
+//					ri->side = 0;
+//				}
+//				else
+//				{
+//					ri->sideDistY += ri->deltaDistY;
+//					ri->mapY += ri->stepY;
+//					ri->side = 1;
+//				}
+//				if (mi->map[ri->mapY][ri->mapX])
+//					ri->hit = mi->map[ri->mapY][ri->mapX];
+//			}
+//			if (!ri->side)
+//				ri->dist = (ri->mapX - ri->posX + (1 - ri->stepX) / 2) / rayDirX;
+//			else
+//				ri->dist = (ri->mapY - ri->posY + (1 - ri->stepY) / 2) / rayDirY;
+//			int lineHeight = (int)(mi->resolution[1] / ri->dist);
+//			int drawStart = -lineHeight / 2 + mi->resolution[1] / 2;
+//			if (drawStart < 0)
+//				drawStart = 0;
+//			int drawEnd = lineHeight / 2 + mi->resolution[1] / 2;
+//			if (drawEnd >= mi->resolution[0])
+//				drawEnd = mi->resolution[0] - 1;
+//			test_draw(mi, mlx, drawStart, drawEnd, x);
+//		}
+//	}
+//}
 
 //void	ray_casting(void *mlx, void *win, t_mi *mi)
 //{
@@ -816,6 +803,124 @@ void test(t_mi *mi, t_ri *ri, t_mlx *mlx)
 //	}
 //
 //}
+
+
+void    test_draw(t_mi *mi, t_mlx *mlx, int draw_start, int draw_end, int cur_ray)
+{
+	int i;
+
+	i = -1;
+	while (++i < mi->resolution[1])
+	{
+		if (i >= draw_start && i <= draw_end)
+			(mlx->mlx, mlx->win, cur_ray, i, 1488);
+		else
+			mlx_pixel_put(mlx->mlx, mlx->win, cur_ray, i, 255000);
+	}
+}
+
+void key_pressed(int key, t_ha *ha)
+{
+	double multiplier;
+	double x_step;
+	double y_step;
+	t_mi *mi = ha->mi;
+	t_ri *ri = ha->ri;
+	t_mlx *mlx = ha->mlx;
+
+	double moveSpeed = key == 13 || key == 0 ? 1.0 : -1.0;
+	double rotSpeed = 0.25;
+
+	multiplier = key == 13 || key == 0 ? mi->step : -mi->step;
+	if (key == 13 || key == 1 || key == 0 || key == 2)
+	{
+		x_step = moveSpeed * ri->dirX;
+		y_step = moveSpeed * ri->dirY;
+		if (mi->map[(int)(mi->y + y_step)][(int)(mi->x)] == '0')
+			mi->y += y_step;
+		if (mi->map[(int)(mi->y)][(int)(mi->x + x_step)] == '0')
+			mi->x += x_step;
+	}
+	if (key == 123 || key == 124)
+	{
+		rotSpeed *= key == 123 ? 1 : -1;
+		double oldDirX = ri->dirX;
+		ri->dirX = ri->dirX * cos(rotSpeed) - ri->dirY * sin(rotSpeed);
+		ri->dirY = oldDirX * sin(rotSpeed) + ri->dirY * cos(rotSpeed);
+		double oldPlaneX = ri->planeX;
+		ri->planeX = ri->planeX * cos(rotSpeed) - ri->planeY * sin(rotSpeed);
+		ri->planeY = oldPlaneX * sin(rotSpeed) + ri->planeY * cos(rotSpeed);
+		mi->angle = atan(hypot(ri->dirX, ri->dirY)/hypot(ri->planeX, ri->planeY));
+
+	}
+	//if (key == 124)
+	//	mi->angle -= 0.1;
+//	if (key == 53)
+//		return (-1);
+	print_map(mi);
+
+
+
+
+	int x;
+	//mlx->img = mlx_new_image(mlx->mlx, mi->resolution[0], mi->resolution[1]);
+	mlx_clear_window(mlx->mlx, mlx->win);
+	x = -1;
+	while(++x < mi->resolution[0])
+	{
+		double cameraX = 2 * x / (double) mi->resolution[0] - 1;
+		double rayDirX = ri->dirX + ri->planeX * cameraX;
+		double rayDirY = ri->dirY + ri->planeY * cameraX;
+		ri->mapX = (int) ri->posX;
+		ri->mapY = (int) ri->posY;
+		ri->deltaDistX = (rayDirY == 0) ? 0 : ((rayDirX == 0) ? 1 : abs(1 / rayDirX));
+		ri->deltaDistY = (rayDirX == 0) ? 0 : ((rayDirY == 0) ? 1 : abs(1 / rayDirY));
+		if (rayDirX < 0) {
+			ri->stepX = -1;
+			ri->sideDistX = (ri->posX - ri->mapX) * ri->deltaDistX;
+		} else {
+			ri->stepX = 1;
+			ri->sideDistX = (ri->mapX + 1.0 - ri->posX) * ri->deltaDistX;
+		}
+		if (rayDirY < 0) {
+			ri->stepY = -1;
+			ri->sideDistY = (ri->posY - ri->mapY) * ri->deltaDistY;
+		} else {
+			ri->stepY = 1;
+			ri->sideDistY = (ri->mapY + 1.0 - ri->posY) * ri->deltaDistY;
+		}
+		while (!ri->hit) {
+			if (ri->sideDistX < ri->sideDistY) {
+				ri->sideDistX += ri->deltaDistX;
+				ri->mapX += ri->stepX;
+				ri->side = 0;
+			} else {
+				ri->sideDistY += ri->deltaDistY;
+				ri->mapY += ri->stepY;
+				ri->side = 1;
+			}
+			if (mi->map[ri->mapX][ri->mapY])
+				ri->hit = mi->map[ri->mapX][ri->mapY] - '0';
+		}
+		if (!ri->side)
+			ri->dist = fabs((ri->mapX - ri->posX + (1 - ri->stepX) / 2) / rayDirX);
+		else
+			ri->dist = fabs((ri->mapY - ri->posY + (1 - ri->stepY) / 2) / rayDirY);
+		int lineHeight = (int) (mi->resolution[1] / ri->dist);
+		int drawStart = -lineHeight / 2 + mi->resolution[1] / 2;
+		if (drawStart < 0)
+			drawStart = 0;
+		int drawEnd = lineHeight / 2 + mi->resolution[1] / 2;
+		if (drawEnd >= mi->resolution[0])
+			drawEnd = mi->resolution[0] - 1;
+		test_draw(mi, mlx, drawStart, drawEnd, x);
+	}
+	//
+	//mlx_destroy_image(mlx->mlx, mlx->img);
+
+}
+
+
 void draw(t_mi *mi)
 {
 	void 	*win;
@@ -825,10 +930,17 @@ void draw(t_mi *mi)
     initialize_ray(mi, &ri);
 	mlx.mlx = mlx_init();
 	mlx.win = mlx_new_window(mlx.mlx, mi->resolution[0], mi->resolution[1], "cub3D");
-    mlx_key_hook(mlx.win, key_pressed, mi);
+	mlx.img = mlx_new_image(mlx.mlx, mi->resolution[0], mi->resolution[1]);
+	mlx_put_image_to_window(mlx.mlx, mlx.win, mlx.img, 0, 0);
+	t_ha ha;
+	ha.mi = mi;
+	ha.mlx = &mlx;
+	ha.ri = &ri;
+	key_pressed(0, &ha);
+    mlx_key_hook(mlx.win, key_pressed, &ha);
     loop = mlx_loop(mlx.mlx);
 
-    test(mi, &ri, &mlx);
+   // test(mi, &ri, &mlx);
 //	if (mlx_key_hook(win, key_pressed, mi) == -1)
 //	{
 //		mlx_destroy_window(mlx.mlx, win);
