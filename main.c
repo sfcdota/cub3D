@@ -689,7 +689,7 @@ int key_pressed(int key, t_data *data)
 		if (data->mi->map[(int)(data->ray->posX - data->ray->dirX * moveSpeed)][(int)data->ray->posY] == '0')
 			data->ray->posX -= data->ray->dirX * moveSpeed;
 		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY - data->ray->dirY * moveSpeed)] == '0')
-			data->ray->posY += data->ray->dirY * moveSpeed;
+			data->ray->posY -= data->ray->dirY * moveSpeed;
 	}
 	if (key == 123 || key == 124)
 	{
@@ -748,7 +748,7 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 		ray->deltaDistX = fabs(1/ray->rayDirX);
 		ray->deltaDistY = fabs(1/ray->rayDirY);
 		ray->hit = 0;
-		if (ray->dirY < 0)
+		if (ray->rayDirY < 0)
 		{
 			ray->stepY = -1;
 			ray->sideDistY = (ray->posY - ray->mapY) * ray->deltaDistY;
@@ -770,17 +770,17 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 		}
 		while (ray->hit == 0)
 		{
-			if (ray->sideDistY < ray->sideDistX)
-			{
-				ray->sideDistY += ray->deltaDistY;
-				ray->mapY += ray->stepY;
-				ray->side = 1;
-			}
-			else
+			if (ray->sideDistX < ray->sideDistY)
 			{
 				ray->sideDistX += ray->deltaDistX;
 				ray->mapX += ray->stepX;
 				ray->side = 0;
+			}
+			else
+			{
+				ray->sideDistY += ray->deltaDistY;
+				ray->mapY += ray->stepY;
+				ray->side = 1;
 			}
 			if (mi->map[ray->mapX][ray->mapY] != '0')
 				ray->hit = mi->map[ray->mapX][ray->mapY] - '0';
@@ -856,10 +856,10 @@ int main (int argc, char **argv)
 		ray.posX = data.mi->x;
 		ray.posY = data.mi->y;
 		ray.angle = data.mi->angle;
-		ray.planeX = 0.66;
-		ray.planeY = 0.0;
-		ray.dirX = cos(ray.angle);
-		ray.dirY = sin(ray.angle);
+		ray.planeX = 0.0;
+		ray.planeY = 0.66;
+		ray.dirX = (int)(-sin(ray.angle));
+		ray.dirY = (int)(cos(ray.angle));
 		data.ray = &ray;
  		render(-1, &data);
 		mlx_hook(mlx.win, 2, 0, render, &data);
