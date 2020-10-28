@@ -38,6 +38,63 @@ typedef struct		s_mi
 	double			step;
 }					t_mi;
 
+typedef struct		s_img
+{
+	void *img;
+	char *addr;
+	int	 	bits_per_pixel;
+	int 	line_length;
+	int 	endian;
+	int 	offset;
+}					t_img;
+
+typedef struct		s_mlx
+{
+	void *mlx;
+	void *win;
+
+}					t_mlx;
+
+
+
+typedef struct		s_ray
+{
+	double posX;
+	double posY;
+	double angle;
+	double dirX;
+	double dirY;
+	double planeX;
+	double planeY;
+	double cameraX;
+	double rayDirX;
+	double rayDirY;
+	double sideDistX;
+	double sideDistY;
+	int mapX;
+	int mapY;
+	double deltaDistX;
+	double deltaDistY;
+	double perpWallDist;
+	int stepX;
+	int stepY;
+	int hit;
+	int side;
+	int lineHeight;
+	int drawStart;
+	int drawEnd;
+
+}					t_ray;
+
+typedef struct		s_data
+{
+	t_mi  *mi;
+	t_mlx *mlx;
+	t_img *img;
+	t_ray *ray;
+}					t_data;
+
+
 
 
 int		is_in_set(char c, char const *set)
@@ -60,8 +117,8 @@ void 	set_angle(t_mi *mi, int i, int j)
 		direction = 2;
 	if (mi->map[i][j] == 'S')
 		direction = 3;
-	mi->x = j;
-	mi->y = -i;
+	mi->x = i;
+	mi->y = j;
 	mi->angle = direction * M_PI_2;
 }
 
@@ -383,7 +440,7 @@ int check_map(t_mi *mi)
 					return (-1);
 		}
 	}
-	mi->map[(int)(-mi->y)][(int)mi->x] = '0';
+	mi->map[(int)(mi->x)][(int)mi->y] = '0';
 	return (1);
 }
 
@@ -418,7 +475,7 @@ int 	check_map_info(t_mi *mi)
 	{
 		if (i < 2)
 		{
-			if (mi->colors[i] == -1 || mi->resolution[i] == -1 || mi->x == -1 || mi->y == 1)
+			if (mi->colors[i] == -1 || mi->resolution[i] == -1 || mi->x == -1 || mi->y == -1)
 				return (-1);
 		}
 		if (mi->textures[i] == NULL)
@@ -474,7 +531,7 @@ void	initialize_mi(t_mi *mi)
 	mi->textures = malloc(sizeof(char *) * 5);
 	mi->resolution = malloc (sizeof(int) * 2);
 	mi->x = -1;
-	mi->y = 1;
+	mi->y = -1;
 	while (++i < 5)
 	{
 		if (i < 2)
@@ -508,7 +565,7 @@ int print_info(t_mi *mi)
 		j = 0;
 		while (j < mi->max_line_length)
 		{
-			printf("%c", i == (int)(-mi->y) && j == (int) mi->x ? 'x'
+			printf("%c", i == (int)(mi->y) && j == (int) mi->x ? 'x'
 																		  : mi->map[i][j]);
 			j++;
 		}
@@ -530,24 +587,24 @@ int print_info(t_mi *mi)
 		   mi->textures[4], mi->colors[0], mi->colors[1], mi->isShared, mi->x, mi->y, mi->angle);
 }
 
-void	print_map(t_mi *mi)
+void	print_map(t_data *data)
 {
 	int i = 0;
 	int j = 0;
-	while (i < mi->lines)
+	while (i < data->mi->lines)
 	{
 		j = 0;
-		while (j < mi->max_line_length)
+		while (j < data->mi->max_line_length)
 		{
-			printf("%c", i == (int)(-mi->y) && j == (int) mi->x ? 'x'
-																		  : mi->map[i][j]);
+			printf("%c", i == data->ray->posY && j == data->ray->posX ? 'x'
+																		  : data->mi->map[i][j]);
 			j++;
 		}
 		printf("\n");
 		i++;
 	}
 	printf("ppos[0] = %lf\t ppos[1] = %lf\n"
-		"angle = %lf", mi->x, mi->y, mi->angle);
+		"angle = %lf", data->ray->posY, data->ray->posX, data->ray->angle);
 }
 
 void 	clear_mi(t_mi *mi)
@@ -592,7 +649,6 @@ int import_config(int argc, char **argv, t_mi *mi, double step)
 	else
 	{
 		mi->step = step;
-		print_info(mi);
 	}
 	return (status <= 0 ? -1 : 1);
 }
@@ -601,115 +657,160 @@ int import_config(int argc, char **argv, t_mi *mi, double step)
 
 
 
-int key_pressed(int key, t_mi *mi)
+int key_pressed(int key, t_data *data)
 {
 	double multiplier;
 	double x_step;
 	double y_step;
 
-	multiplier = key == 13 || key == 0 ? mi->step : -mi->step;
-//	if (key == 13 || key == 1)
+	double rotSpeed = 0.25;
+	double moveSpeed = 0.5;
+	multiplier = key == 13 || key == 0 ? 1 : -1;
+//	if (key == 13 || key == 1 || key == 0 || key == 2)
 //	{
-//		x_step = cos(mi->angle) * multiplier;
-//		y_step = -sin(mi->angle) * multiplier;
+//		x_step = multiplier * cos(data->ray->angle + (key == 13 || key == 1 ? 0 : M_PI_2));
+//		y_step = multiplier * sin(data->ray->angle +(key == 13 || key == 1 ? 0 : 3 * M_PI_2));
+//		if (data->mi->map[(int)((data->ray->posX + x_step))][(int)(data->ray->posY)] == '0')
+//			data->ray->posX += x_step;
+//		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + y_step)] == '0')
+//			data->ray->posY += y_step;
 //	}
-//	if (key == 0 || key == 2)
-//	{
-//		x_step = cos(mi->angle + M_PI_2) * multiplier;
-//		y_step = sin(mi->angle + M_PI_2) * multiplier;
-//	}
-	if (key == 13 || key == 1 || key == 0 || key == 2)
+
+	if (key == 13)
 	{
-		x_step = multiplier * cos(mi->angle + (key == 13 || key == 1 ? 0 : M_PI_2));
-		y_step = multiplier * sin(mi->angle +(key == 13 || key == 1 ? 0 : 3 * M_PI_2));
-		if (mi->map[(int)(-(mi->y + y_step))][(int)(mi->x)] == '0')
-			mi->y += y_step;
-		if (mi->map[(int)(-mi->y)][(int)(mi->x + x_step)] == '0')
-			mi->x += x_step;
+		if (data->mi->map[(int)(data->ray->posX + data->ray->dirX *moveSpeed)][(int)data->ray->posY] == '0')
+			data->ray->posX += data->ray->dirX * moveSpeed;
+		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + data->ray->dirY * moveSpeed)] == '0')
+			data->ray->posY += data->ray->dirY * moveSpeed;
 	}
-	if (key == 123)
-		mi->angle += 0.1;
-	if (key == 124)
-		mi->angle -= 0.1;
-//	if (key == 53)
-//		return (-1);
-	print_map(mi);
+
+	if (key == 1)
+	{
+		if (data->mi->map[(int)(data->ray->posX - data->ray->dirX * moveSpeed)][(int)data->ray->posY] == '0')
+			data->ray->posX -= data->ray->dirX * moveSpeed;
+		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY - data->ray->dirY * moveSpeed)] == '0')
+			data->ray->posY += data->ray->dirY * moveSpeed;
+	}
+	if (key == 123 || key == 124)
+	{
+		rotSpeed *= key == 123 ? 1 : -1;
+		if (key == 123) {
+			if (data->ray->angle > 4 * M_PI)
+				data->ray->angle -= 2 * M_PI;
+		}
+		if (key == 124) {
+			if (data->ray->angle < -4 * M_PI)
+				data->ray->angle += 2 * M_PI;
+		}
+//		data->ray->dirX = cos(data->ray->angle);
+//		data->ray->dirY = sin(data->ray->angle);
+		double oldDirX = data->ray->dirX;
+		data->ray->dirX = data->ray->dirX * cos(rotSpeed) - data->ray->dirY * sin (rotSpeed);
+		data->ray->dirY = oldDirX * sin(rotSpeed) + data->ray->dirY * cos(rotSpeed);
+		double oldPlaneX = data->ray->planeX;
+		data->ray->planeX = data->ray->planeX * cos(rotSpeed) - data->ray->planeY * sin (rotSpeed);
+		data->ray->planeY = oldPlaneX * sin (rotSpeed) + data->ray->planeY * cos (rotSpeed);
+		data->ray->angle += rotSpeed;
+	}
+	print_map(data);
 	return(1);
 }
 
-double 	my_abs(double x)
+void            my_mlx_pixel_put(t_img *img, int x, int y, unsigned int color)
 {
-	if (x < 0)
-		return (-x);
-	return (x);
+	char *dst;
+
+	dst = img->addr + (y * img->line_length + x * (img->bits_per_pixel / 8));
+	*(unsigned int *) dst = color;
 }
 
-double length_to_barrier(t_mi *mi, double angle) // + for wall | - for sprite
-{
-	double dx;
-	double dy;
-	int i;
-	int j;
 
-	i = (int)mi->y;
-	j = (int)mi->x;
-	dx = cos(angle) >= 0 ? 1 : -1;
-	dy = sin(angle) >= 0 ? 1 : -1;
-	while (-i < mi->lines && -i >= 0)
+void	verLine(int x, int drawStart, int drawEnd, t_data *data)
+{
+	for (int i = 0; i < data->mi->resolution[1]; i++)
+		my_mlx_pixel_put(data->img, x, i, i >= drawStart && i <= drawEnd ? 0x00FF0000 : 0x000000FF);
+
+}
+
+
+void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
+{
+	int i;
+
+	i = -1;
+	while(++i < mi->resolution[0])
 	{
-
-		while (j < mi->max_line_length)
+		ray->cameraX = 2 * i / (double)mi->resolution[1] - 1;
+		ray->rayDirY = ray->dirY + ray->planeY * ray->cameraX;
+		ray->rayDirX = ray->dirX + ray->planeX * ray->cameraX;
+		ray->mapX = (int)ray->posX;
+		ray->mapY = (int)ray->posY;
+		ray->deltaDistX = fabs(1/ray->rayDirX);
+		ray->deltaDistY = fabs(1/ray->rayDirY);
+		ray->hit = 0;
+		if (ray->dirY < 0)
 		{
-
-			j += dx;
+			ray->stepY = -1;
+			ray->sideDistY = (ray->posY - ray->mapY) * ray->deltaDistY;
 		}
-		i += dy;
+		else
+		{
+			ray->stepY = 1;
+			ray->sideDistY = (ray->mapY + 1.0 - ray->posY) * ray->deltaDistY;
+		}
+		if (ray->rayDirX < 0)
+		{
+			ray->stepX = -1;
+			ray->sideDistX = (ray->posX - ray->mapX) * ray->deltaDistX;
+		}
+		else
+		{
+			ray->stepX = 1;
+			ray->sideDistX = (ray->mapX + 1.0 - ray->posX) * ray->deltaDistX;
+		}
+		while (ray->hit == 0)
+		{
+			if (ray->sideDistY < ray->sideDistX)
+			{
+				ray->sideDistY += ray->deltaDistY;
+				ray->mapY += ray->stepY;
+				ray->side = 1;
+			}
+			else
+			{
+				ray->sideDistX += ray->deltaDistX;
+				ray->mapX += ray->stepX;
+				ray->side = 0;
+			}
+			if (mi->map[ray->mapX][ray->mapY] != '0')
+				ray->hit = mi->map[ray->mapX][ray->mapY] - '0';
+		}
+		if (ray->side == 0)
+			ray->perpWallDist = (ray->mapX - ray->posX + (1 - ray->stepX) / 2) / ray->rayDirX;
+		else
+			ray->perpWallDist = (ray->mapY - ray->posY + (1 - ray->stepY) / 2) / ray->rayDirY;
+		ray->lineHeight = (int)(mi->resolution[1] / ray->perpWallDist);
+		ray->drawStart = -ray->lineHeight / 2 + mi->resolution[1] / 2;
+		if (ray->drawStart < 0)
+			ray->drawStart = 0;
+		ray->drawEnd = ray->lineHeight / 2 + mi->resolution[1] / 2;
+		if (ray->drawEnd >= mi->resolution[1])
+			ray->drawEnd = mi->resolution[1] - 1;
+		verLine(i, ray->drawStart, ray->drawEnd, data);
 	}
-	while(mi->map[by][bx] == '0')
-
+	mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->img->img, 0, 0);
 }
 
-void	ray_casting(void *mlx, void *win, t_mi *mi)
+
+int render(int key, t_data *data)
 {
-	int i;
-	int j;
-	double view_angle_ray;
 	double dist;
-	int color;
 
-	i = 0;
-	while (++i <= mi->resolution[0])
-	{
-		view_angle_ray = mi->angle + M_PI_4 - i * M_PI_2 / mi->resolution[0]; //меняется от вью + пи/4 до вью - пи/4 (90 градусов)
-		dist = length_to_barrier(mi, view_angle_ray);
-		j = 0;
-		while (++j <= mi->resolution[1])
-		{
-			color = j < (mi->resolution - dist) / 2 || s
-			mlx_pixel_put(mlx, win, i, j, 255000000);
-		}
-	}
 
-}
-void draw(t_mi *mi)
-{
-	void 	*mlx;
-	void 	*win;
-	int		loop;
+	key_pressed(key, data);
 
-	mlx = mlx_init();
-	win = mlx_new_window(mlx, mi->resolution[0], mi->resolution[1], "cub3D");
-	if (mlx_key_hook(win, key_pressed, mi) == -1)
-	{
-		mlx_destroy_window(mlx, win);
-		clear_mi(mi);
-	}
-	while(1)
-	{
-		ray_casting(mlx, win, mi);
-	}
+	calcDist(data->mi, data->ray, data);
 
-	loop = mlx_loop(mlx);
 }
 
 
@@ -737,11 +838,32 @@ int main (int argc, char **argv)
 //						};
 	double step;
 	t_mi mi;
+	t_img img;
+	t_mlx mlx;
+	t_data data;
+	t_ray ray;
 
 	step = 1;
 	if (import_config(argc, argv, &mi, step) >= 0)
 	{
-		draw(&mi);
+		mlx.mlx = mlx_init();
+		mlx.win = mlx_new_window(mlx.mlx, mi.resolution[0], mi.resolution[1], "cub3D");
+		img.img = mlx_new_image(mlx.mlx, mi.resolution[0], mi.resolution[1]);
+		img.addr = mlx_get_data_addr(img.img, &img.bits_per_pixel, &img.line_length, &img.endian);
+		data.mlx = &mlx;
+		data.img = &img;
+		data.mi = &mi;
+		ray.posX = data.mi->x;
+		ray.posY = data.mi->y;
+		ray.angle = data.mi->angle;
+		ray.planeX = 0.66;
+		ray.planeY = 0.0;
+		ray.dirX = cos(ray.angle);
+		ray.dirY = sin(ray.angle);
+		data.ray = &ray;
+ 		render(-1, &data);
+		mlx_hook(mlx.win, 2, 0, render, &data);
+		mlx_loop(mlx.mlx);
 	}
 	else
 		clear_mi(&mi);
