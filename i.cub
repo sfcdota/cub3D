@@ -1,9 +1,9 @@
 R 800 600
-NO ./path_to_the_north_texture
-SO ./path_to_the_south_texture
-WE ./path_to_the_west_texture
-EA ./path_to_the_east_texture
-S ./path_to_the_sprite_texture
+NO ./pics/xpms/bluestone.xpm
+SO ./pics/xpms/greystone.xpm
+WE ./pics/xpms/mossy.xpm
+EA ./pics/xpms/redbrick.xpm
+S ./pics/xpms/pillar.xpm
 
 
 
@@ -34,6 +34,6 @@ C 225,30,0
 140400004000000000000001
 140444444000000000000001
 140000000000000000000001
-1444444440000000000000N1
+1444444440000000000000S1
 111111111111111111111111
 

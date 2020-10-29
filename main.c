@@ -55,7 +55,12 @@ typedef struct		s_mlx
 
 }					t_mlx;
 
-
+typedef struct		s_texture
+{
+	void *img;
+	int width;
+	int height;
+}					t_texture;
 
 typedef struct		s_ray
 {
@@ -91,6 +96,11 @@ typedef struct		s_data
 	t_mi  *mi;
 	t_mlx *mlx;
 	t_img *img;
+	t_texture *n_img;
+	t_texture *s_img;
+	t_texture *w_img;
+	t_texture *e_img;
+	t_texture *sp_img;
 	t_ray *ray;
 }					t_data;
 
@@ -117,8 +127,8 @@ void 	set_angle(t_mi *mi, int i, int j)
 		direction = 2;
 	if (mi->map[i][j] == 'S')
 		direction = 3;
-	mi->x = i;
-	mi->y = j;
+	mi->x = i + 0.5;
+	mi->y = j + 0.5;
 	mi->angle = direction * M_PI_2;
 }
 
@@ -556,7 +566,7 @@ int correct_cub(char *line)
 	return 0;
 }
 
-int print_info(t_mi *mi)
+void print_info(t_mi *mi)
 {
 	int i = 0;
 	int j = 0;
@@ -585,6 +595,7 @@ int print_info(t_mi *mi)
   "angle = %lf\n", mi->resolution[0], mi->resolution[1],
 		   mi->textures[0], mi->textures[1], mi->textures[2], mi->textures[3],
 		   mi->textures[4], mi->colors[0], mi->colors[1], mi->isShared, mi->x, mi->y, mi->angle);
+
 }
 
 void	print_map(t_data *data)
@@ -656,7 +667,6 @@ int import_config(int argc, char **argv, t_mi *mi, double step)
 
 
 
-
 int key_pressed(int key, t_data *data)
 {
 	double multiplier;
@@ -664,7 +674,7 @@ int key_pressed(int key, t_data *data)
 	double y_step;
 
 	double rotSpeed = 0.25;
-	double moveSpeed = 0.5;
+	double moveSpeed = key == 13 || key == 0 ? 0.5 : -0.5;
 	multiplier = key == 13 || key == 0 ? 1 : -1;
 //	if (key == 13 || key == 1 || key == 0 || key == 2)
 //	{
@@ -686,10 +696,25 @@ int key_pressed(int key, t_data *data)
 
 	if (key == 1)
 	{
-		if (data->mi->map[(int)(data->ray->posX - data->ray->dirX * moveSpeed)][(int)data->ray->posY] == '0')
-			data->ray->posX -= data->ray->dirX * moveSpeed;
-		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY - data->ray->dirY * moveSpeed)] == '0')
-			data->ray->posY -= data->ray->dirY * moveSpeed;
+		if (data->mi->map[(int)(data->ray->posX + data->ray->dirX * moveSpeed)][(int)data->ray->posY] == '0')
+			data->ray->posX += data->ray->dirX * moveSpeed;
+		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + data->ray->dirY * moveSpeed)] == '0')
+			data->ray->posY += data->ray->dirY * moveSpeed;
+	}
+	if (key == 0)
+	{
+		if (data->mi->map[(int)(data->ray->posX + data->ray->dirY * moveSpeed)][(int)data->ray->posY] == '0')
+			data->ray->posX += data->ray->dirY * moveSpeed;
+		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + data->ray->dirX * moveSpeed)] == '0')
+			data->ray->posY += data->ray->dirX * moveSpeed;
+	}
+
+	if (key == 2)
+	{
+		if (data->mi->map[(int)(data->ray->posX + data->ray->dirY * moveSpeed)][(int)data->ray->posY] == '0')
+			data->ray->posX += data->ray->dirY * moveSpeed;
+		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + data->ray->dirX * moveSpeed)] == '0')
+			data->ray->posY += data->ray->dirX * moveSpeed;
 	}
 	if (key == 123 || key == 124)
 	{
@@ -814,6 +839,33 @@ int render(int key, t_data *data)
 }
 
 
+
+void import_textures(t_data *data)
+{
+	data->n_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[0], &data->n_img->width, &data->n_img->height);
+	data->s_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[1], &data->s_img->width, &data->s_img->height);
+	data->w_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[2], &data->w_img->width, &data->w_img->height);
+	data->e_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[3], &data->e_img->width, &data->e_img->height);
+	data->sp_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[4], &data->sp_img->width, &data->sp_img->height);
+
+}
+
+
+void	adjust_vectors(t_data *data)
+{
+	double diff_angle;
+
+	diff_angle = data->ray->angle - M_PI_2;
+	double oldDirX = data->ray->dirX;
+	data->ray->dirX = data->ray->dirX * cos(diff_angle) - data->ray->dirY * sin (diff_angle);
+	data->ray->dirY = oldDirX * sin(diff_angle) + data->ray->dirY * cos(diff_angle);
+	double oldPlaneX = data->ray->planeX;
+	data->ray->planeX = data->ray->planeX * cos(diff_angle) - data->ray->planeY * sin (diff_angle);
+	data->ray->planeY = oldPlaneX * sin (diff_angle) + data->ray->planeY * cos (diff_angle);
+	data->ray->angle += diff_angle;
+}
+
+
 int main (int argc, char **argv)
 {
 //	char *spaces = "\a\b\t\n\v\f\r ";
@@ -842,7 +894,11 @@ int main (int argc, char **argv)
 	t_mlx mlx;
 	t_data data;
 	t_ray ray;
-
+	t_texture n;
+	t_texture s;
+	t_texture w;
+	t_texture e;
+	t_texture sp;
 	step = 1;
 	if (import_config(argc, argv, &mi, step) >= 0)
 	{
@@ -853,15 +909,23 @@ int main (int argc, char **argv)
 		data.mlx = &mlx;
 		data.img = &img;
 		data.mi = &mi;
+		data.ray = &ray;
 		ray.posX = data.mi->x;
 		ray.posY = data.mi->y;
 		ray.angle = data.mi->angle;
 		ray.planeX = 0.0;
 		ray.planeY = 0.66;
-		ray.dirX = (int)(-sin(ray.angle));
-		ray.dirY = (int)(cos(ray.angle));
-		data.ray = &ray;
- 		render(-1, &data);
+		ray.dirX = -1;
+		ray.dirY = 0;
+		if (ray.angle != M_PI_2)
+			adjust_vectors(&data);
+		data.n_img = &n;
+		data.s_img = &s;
+		data.e_img = &e;
+		data.w_img = &w;
+		data.sp_img = &sp;
+		import_textures(&data);
+		render(-1, &data);
 		mlx_hook(mlx.win, 2, 0, render, &data);
 		mlx_loop(mlx.mlx);
 	}
