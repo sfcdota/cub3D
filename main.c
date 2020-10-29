@@ -28,7 +28,7 @@ typedef struct		s_mi
 	int				*colors; // f = 0; c = 1;
 	t_list			*map_list;
 	double 			lines;
-	double				max_line_length;
+	double			max_line_length;
 	char			**map;
 	int				error;
 	double			x;
@@ -60,6 +60,11 @@ typedef struct		s_texture
 	void *img;
 	int width;
 	int height;
+	char *addr;
+	int	 	bits_per_pixel;
+	int 	line_length;
+	int 	endian;
+	int 	offset;
 }					t_texture;
 
 typedef struct		s_ray
@@ -246,29 +251,38 @@ void	parse_textures(char **line, t_mi *mi, int texture_index)
 	close(fd);
 }
 
+int		create_trgb(int t, int r, int g, int b)
+{
+	return(t << 24 | r << 16 | g << 8 | b);
+}
+
 void	parse_color(char **line, t_mi *mi, int color_index)
 {
 	int color;
 	int multiplier;
-	int temp;
+	int *ha;
+	int i;
+
+	i = -1;
+	ha = malloc (sizeof(int) * 3);
 
 	*line += sizeof(char) * 1;
 	multiplier = 1000000;
 	color = 0;
-	while (multiplier && *line)
+	while (++i < 3 && *line)
 	{
-		if ((temp = ft_atoi_color(line)) >= 0)
+		if ((ha[i] = ft_atoi_color(line)) >= 0)
 		{
-			color += temp * multiplier;
-			multiplier /= 1000;
-			if (**line == ',' && multiplier)
+			if (**line == ',' && i < 3)
 				(*line)++;
 			else if (**line)
 					*line = NULL;
 		}
+		else
+			*line = NULL;
 	}
 	if (*line)
-		mi->colors[color_index] = color;
+		mi->colors[color_index] = create_trgb(0, ha[0], ha[1], ha[2]);
 	else
 		mi->error = 0;
 }
@@ -551,16 +565,7 @@ void	initialize_mi(t_mi *mi)
 	mi->isShared = 0;
 }
 
-int correct_cub(char *line)
-{
-	int length;
 
-	length = ft_strlen(line);
-	if (line[length - 1] == 'b' && line[length - 2] == 'u'
-	&& line[length - 3] == 'c')
-		return 1;
-	return 0;
-}
 
 void print_info(t_mi *mi)
 {
@@ -665,47 +670,16 @@ int import_config(int argc, char **argv, t_mi *mi, double step)
 
 int key_pressed(int key, t_data *data)
 {
-	double multiplier;
-	double x_step;
-	double y_step;
-
 	double rotSpeed = 0.25;
 	double moveSpeed = key == 13 || key == 0 ? 0.5 : -0.5;
-	multiplier = key == 13 || key == 0 ? 1 : -1;
-//	if (key == 13 || key == 1 || key == 0 || key == 2)
-//	{
-//		x_step = multiplier * cos(data->ray->angle + (key == 13 || key == 1 ? 0 : M_PI_2));
-//		y_step = multiplier * sin(data->ray->angle +(key == 13 || key == 1 ? 0 : 3 * M_PI_2));
-//		if (data->mi->map[(int)((data->ray->posX + x_step))][(int)(data->ray->posY)] == '0')
-//			data->ray->posX += x_step;
-//		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + y_step)] == '0')
-//			data->ray->posY += y_step;
-//	}
-
-	if (key == 13)
+	if (key == 13 || key == 1)
 	{
 		if (data->mi->map[(int)(data->ray->posX + data->ray->dirX *moveSpeed)][(int)data->ray->posY] == '0')
 			data->ray->posX += data->ray->dirX * moveSpeed;
 		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + data->ray->dirY * moveSpeed)] == '0')
 			data->ray->posY += data->ray->dirY * moveSpeed;
 	}
-
-	if (key == 1)
-	{
-		if (data->mi->map[(int)(data->ray->posX + data->ray->dirX * moveSpeed)][(int)data->ray->posY] == '0')
-			data->ray->posX += data->ray->dirX * moveSpeed;
-		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + data->ray->dirY * moveSpeed)] == '0')
-			data->ray->posY += data->ray->dirY * moveSpeed;
-	}
-	if (key == 0)
-	{
-		if (data->mi->map[(int)(data->ray->posX + data->ray->dirY * moveSpeed)][(int)data->ray->posY] == '0')
-			data->ray->posX += data->ray->dirY * moveSpeed;
-		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY + data->ray->dirX * moveSpeed)] == '0')
-			data->ray->posY += data->ray->dirX * moveSpeed;
-	}
-
-	if (key == 2)
+	if (key == 0 || key == 2)
 	{
 		if (data->mi->map[(int)(data->ray->posX + data->ray->dirY * moveSpeed)][(int)data->ray->posY] == '0')
 			data->ray->posX += data->ray->dirY * moveSpeed;
@@ -715,16 +689,16 @@ int key_pressed(int key, t_data *data)
 	if (key == 123 || key == 124)
 	{
 		rotSpeed *= key == 123 ? 1 : -1;
-		if (key == 123) {
+		if (key == 123)
+		{
 			if (data->ray->angle > 4 * M_PI)
 				data->ray->angle -= 2 * M_PI;
 		}
-		if (key == 124) {
+		if (key == 124)
+		{
 			if (data->ray->angle < -4 * M_PI)
 				data->ray->angle += 2 * M_PI;
 		}
-//		data->ray->dirX = cos(data->ray->angle);
-//		data->ray->dirY = sin(data->ray->angle);
 		double oldDirX = data->ray->dirX;
 		data->ray->dirX = data->ray->dirX * cos(rotSpeed) - data->ray->dirY * sin (rotSpeed);
 		data->ray->dirY = oldDirX * sin(rotSpeed) + data->ray->dirY * cos(rotSpeed);
@@ -746,22 +720,34 @@ void            my_mlx_pixel_put(t_img *img, int x, int y, unsigned int color)
 }
 
 
-void	verLine(int x, int drawStart, int drawEnd, t_data *data)
+
+
+void	verLine(int x, t_data *data)
 {
 	for (int i = 0; i < data->mi->resolution[1]; i++)
-		my_mlx_pixel_put(data->img, x, i, i >= drawStart && i <= drawEnd ? 0x00FF0000 : 0x000000FF);
-
+	{
+		if (i <= data->ray->drawStart)
+			my_mlx_pixel_put(data->img, x, i, data->mi->colors[0]);
+		else if (i < data->ray->drawEnd)
+		{
+			my_mlx_pixel_put(data->img, x, i, 0x00FFFFFFF & 0x00FF00000);
+		}
+		else
+			my_mlx_pixel_put(data->img, x, i, data->mi->colors[1]);
+	}
 }
 
 
 void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 {
-	int i;
+	int x;
 
-	i = -1;
-	while(++i < mi->resolution[0])
+	x = -1;
+
+	unsigned int buffer [mi->resolution[1]][mi->resolution[0]];
+	while(++x < mi->resolution[0])
 	{
-		ray->cameraX = 2 * i / (double)mi->resolution[1] - 1;
+		ray->cameraX = 2 * x / (double)mi->resolution[1] - 1;
 		ray->rayDirY = ray->dirY + ray->planeY * ray->cameraX;
 		ray->rayDirX = ray->dirX + ray->planeX * ray->cameraX;
 		ray->mapX = (int)ray->posX;
@@ -817,16 +803,35 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 		ray->drawEnd = ray->lineHeight / 2 + mi->resolution[1] / 2;
 		if (ray->drawEnd >= mi->resolution[1])
 			ray->drawEnd = mi->resolution[1] - 1;
+
+
+
 		double wallX;
 		if (ray->side == 0)
 			wallX = ray->posY + ray->perpWallDist * ray->rayDirY;
 		else
 			wallX = ray->posX + ray->perpWallDist * ray->rayDirX;
 		wallX -= floor(wallX);
-		int texX = (int)(wallX * (double)(data->textures[ray->side].width));
-		if (side )
-		verLine(i, ray->drawStart, ray->drawEnd, data);
+		int texNum = ray->hit == 1 ? ray->side : 4;
+		int texWidth = data->textures[texNum].width;
+		int texHeight = data->textures[texNum].height;
+		int texX = (int)(wallX * (double)(texWidth));
+		if ((ray->side == 0 && ray->rayDirX > 0) || (ray->side == 2 && ray->rayDirY < 0))
+			texX = texWidth - texX - 1;
+		double step = 1.0 * texHeight / ray->lineHeight;
+		double texPos = (ray->drawStart - mi->resolution[1] / 2 + ray->lineHeight / 2) * step;
+		for (int y = ray->drawStart; y < ray->drawEnd; y++)
+		{
+			int texY = (int)texPos & (texHeight - 1);
+			texPos += step;
+			unsigned int color = ((unsigned int *)data->textures[texNum].addr)[texHeight * texY + texX];
+			buffer[y][x] = color;
+		}
+
+
+		//verLine(i, data);
 	}
+
 	mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->img->img, 0, 0);
 }
 
@@ -847,10 +852,15 @@ int render(int key, t_data *data)
 void import_textures(t_data *data)
 {
 	data->textures[0].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[0], &data->textures[0].width, &data->textures[0].height);
+	data->textures[0].addr = mlx_get_data_addr(data->textures[0].img, &data->textures[0].bits_per_pixel, &data->textures[0].line_length, &data->textures[0].endian);
 	data->textures[1].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[1], &data->textures[1].width, &data->textures[1].height);
+	data->textures[1].addr = mlx_get_data_addr(data->textures[1].img, &data->textures[1].bits_per_pixel, &data->textures[1].line_length, &data->textures[1].endian);
 	data->textures[2].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[2], &data->textures[2].width, &data->textures[2].height);
+	data->textures[2].addr = mlx_get_data_addr(data->textures[2].img, &data->textures[2].bits_per_pixel, &data->textures[2].line_length, &data->textures[2].endian);
 	data->textures[3].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[3], &data->textures[3].width, &data->textures[3].height);
+	data->textures[3].addr = mlx_get_data_addr(data->textures[3].img, &data->textures[3].bits_per_pixel, &data->textures[3].line_length, &data->textures[3].endian);
 	data->textures[4].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[4], &data->textures[4].width, &data->textures[4].height);
+	data->textures[4].addr = mlx_get_data_addr(data->textures[4].img, &data->textures[4].bits_per_pixel, &data->textures[4].line_length, &data->textures[4].endian);
 
 }
 
@@ -920,6 +930,7 @@ int main (int argc, char **argv)
 		ray.dirY = 0;
 		if (ray.angle != M_PI_2)
 			adjust_vectors(&data);
+		data.textures = textures;
 		import_textures(&data);
 		render(-1, &data);
 		mlx_hook(mlx.win, 2, 0, render, &data);
