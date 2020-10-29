@@ -96,11 +96,7 @@ typedef struct		s_data
 	t_mi  *mi;
 	t_mlx *mlx;
 	t_img *img;
-	t_texture *n_img;
-	t_texture *s_img;
-	t_texture *w_img;
-	t_texture *e_img;
-	t_texture *sp_img;
+	t_texture *textures;
 	t_ray *ray;
 }					t_data;
 
@@ -821,6 +817,14 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 		ray->drawEnd = ray->lineHeight / 2 + mi->resolution[1] / 2;
 		if (ray->drawEnd >= mi->resolution[1])
 			ray->drawEnd = mi->resolution[1] - 1;
+		double wallX;
+		if (ray->side == 0)
+			wallX = ray->posY + ray->perpWallDist * ray->rayDirY;
+		else
+			wallX = ray->posX + ray->perpWallDist * ray->rayDirX;
+		wallX -= floor(wallX);
+		int texX = (int)(wallX * (double)(data->textures[ray->side].width));
+		if (side )
 		verLine(i, ray->drawStart, ray->drawEnd, data);
 	}
 	mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->img->img, 0, 0);
@@ -842,11 +846,11 @@ int render(int key, t_data *data)
 
 void import_textures(t_data *data)
 {
-	data->n_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[0], &data->n_img->width, &data->n_img->height);
-	data->s_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[1], &data->s_img->width, &data->s_img->height);
-	data->w_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[2], &data->w_img->width, &data->w_img->height);
-	data->e_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[3], &data->e_img->width, &data->e_img->height);
-	data->sp_img->img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[4], &data->sp_img->width, &data->sp_img->height);
+	data->textures[0].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[0], &data->textures[0].width, &data->textures[0].height);
+	data->textures[1].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[1], &data->textures[1].width, &data->textures[1].height);
+	data->textures[2].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[2], &data->textures[2].width, &data->textures[2].height);
+	data->textures[3].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[3], &data->textures[3].width, &data->textures[3].height);
+	data->textures[4].img = mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[4], &data->textures[4].width, &data->textures[4].height);
 
 }
 
@@ -894,11 +898,8 @@ int main (int argc, char **argv)
 	t_mlx mlx;
 	t_data data;
 	t_ray ray;
-	t_texture n;
-	t_texture s;
-	t_texture w;
-	t_texture e;
-	t_texture sp;
+	t_texture *textures;
+	textures = malloc (sizeof(t_texture) * 5);
 	step = 1;
 	if (import_config(argc, argv, &mi, step) >= 0)
 	{
@@ -919,11 +920,6 @@ int main (int argc, char **argv)
 		ray.dirY = 0;
 		if (ray.angle != M_PI_2)
 			adjust_vectors(&data);
-		data.n_img = &n;
-		data.s_img = &s;
-		data.e_img = &e;
-		data.w_img = &w;
-		data.sp_img = &sp;
 		import_textures(&data);
 		render(-1, &data);
 		mlx_hook(mlx.win, 2, 0, render, &data);
