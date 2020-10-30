@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/10/12 15:55:36 by cbach             #+#    #+#             */
-/*   Updated: 2020/10/12 20:05:57 by cbach            ###   ########.fr       */
+/*   Updated: 2020/10/30 17:59:22 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,12 @@
 #include <mlx.h>
 #include <math.h>
 
+
+typedef struct		s_sprite
+{
+	double x;
+	double y;
+}					t_sprite;
 
 typedef struct		s_mi
 {
@@ -35,7 +41,12 @@ typedef struct		s_mi
 	double 			y;//x = 0; y = 1
 	double 			angle;
 	int				isShared;
-	double			step;
+	int 			numSprites;
+	t_list			*sprite_list;
+	t_sprite		*sprites;
+	int 			*spriteOrder;
+	double 			*spriteDistance;
+
 }					t_mi;
 
 typedef struct		s_img
@@ -52,6 +63,7 @@ typedef struct		s_mlx
 {
 	void *mlx;
 	void *win;
+
 
 }					t_mlx;
 
@@ -93,6 +105,29 @@ typedef struct		s_ray
 	int lineHeight;
 	int drawStart;
 	int drawEnd;
+	double wallX;
+	int texNum;
+	int texWidth;
+	int texHeight;
+	int texX;
+	int texY;
+	double step;
+	double texPos;
+	int x;
+	int y;
+	double spriteX;
+	double spriteY;
+	double invDet;
+	double transformX;
+	double transformY;
+	int spriteScreenX;
+	int spriteHeight;
+	int spriteWidth;
+	int drawStartY;
+	int drawEndY;
+	int drawStartX;
+	int drawEndX;
+	int stripe;
 
 }					t_ray;
 
@@ -106,7 +141,11 @@ typedef struct		s_data
 }					t_data;
 
 
-
+void	del(void *content)
+{
+	free(content);
+	content = NULL;
+}
 
 int		is_in_set(char c, char const *set)
 {
@@ -417,7 +456,7 @@ char	*line_copy(double width, char *src)
 	int j;
 
 	j = 0;
-	if(!(dest = malloc(sizeof(char) * ((int)width + 1))))
+	if(!(dest = ft_calloc(sizeof(char), (int)width + 1)))
 		return NULL;
 	while (j < width)
 	{
@@ -429,11 +468,7 @@ char	*line_copy(double width, char *src)
 }
 
 
-void	del(void *content)
-{
-	free(content);
-	content = NULL;
-}
+
 
 int check_map(t_mi *mi)
 {
@@ -441,6 +476,8 @@ int check_map(t_mi *mi)
 	int j;
 
 	i = -1;
+
+
 	while (++i < mi->lines)
 	{
 		j = -1;
@@ -458,6 +495,8 @@ int check_map(t_mi *mi)
 			(mi->map[i - 1][j] == ' ' || mi->map[i + 1][j] == ' ' ||
 			mi->map[i][j - 1] == ' ' || mi->map[i][j + 1] == ' ')))
 					return (-1);
+			if (mi->map[i][j] == '2')
+				mi->numSprites++;
 		}
 	}
 	mi->map[(int)(mi->x)][(int)mi->y] = '0';
@@ -484,6 +523,32 @@ int	map_list_to_array(t_mi *mi)
 	ft_lstclear(&(mi->map_list), del);
 	mi->map = map;
 	return check_map(mi);
+}
+
+void	parse_sprites_info(t_mi *mi)
+{
+	int i;
+	int j;
+
+	i = -1;
+	int s;
+	s = 0;
+	mi->spriteDistance = malloc (sizeof(double) * mi->numSprites);
+	mi->spriteOrder = malloc (sizeof(int) * mi->numSprites);
+	mi->sprites = malloc(sizeof(t_sprite) * mi->numSprites);
+	while(++i < mi->lines)
+	{
+		j = -1;
+		while(++j < mi->max_line_length)
+		{
+			if (mi->map[i][j] == '2')
+			{
+				mi->sprites[s].x = i;
+				mi->sprites[s].y = j;
+				s++;
+			}
+		}
+	}
 }
 
 int 	check_map_info(t_mi *mi)
@@ -542,6 +607,7 @@ void	initialize_mi(t_mi *mi)
 	int i;
 
 	i = -1;
+	mi->numSprites = 0;
 	mi->max_line_length = 0;
 	mi->lines = 0;
 	mi->map_list = NULL;
@@ -641,8 +707,7 @@ void 	clear_mi(t_mi *mi)
 		free(mi->textures);
 }
 
-
-int import_config(int argc, char **argv, t_mi *mi, double step)
+int import_config(int argc, char **argv, t_mi *mi)
 {
 	int status;
 
@@ -653,15 +718,15 @@ int import_config(int argc, char **argv, t_mi *mi, double step)
 		status = parse(mi, argv[1]);
 		if (argc == 3 && ft_strncmp("--shared", argv[2], 10))
 			mi->isShared = 1;
+		if (status != -1 && mi->numSprites)
+		{
+			parse_sprites_info(mi);
+		}
 	}
 	else
 		status = -1;
 	if (status == -1 || mi->error >= 0)
 		printf("there is an error ... ERROR CODE = %d\n", status);
-	else
-	{
-		mi->step = step;
-	}
 	return (status <= 0 ? -1 : 1);
 }
 
@@ -700,7 +765,7 @@ int key_pressed(int key, t_data *data)
 				data->ray->angle += 2 * M_PI;
 		}
 		double oldDirX = data->ray->dirX;
-		data->ray->dirX = data->ray->dirX * cos(rotSpeed) - data->ray->dirY * sin (rotSpeed);
+		data->ray->dirX = data->ray->dirX * cos(rotSpeed) - data->ray->dirY * sin(rotSpeed);
 		data->ray->dirY = oldDirX * sin(rotSpeed) + data->ray->dirY * cos(rotSpeed);
 		double oldPlaneX = data->ray->planeX;
 		data->ray->planeX = data->ray->planeX * cos(rotSpeed) - data->ray->planeY * sin (rotSpeed);
@@ -711,6 +776,11 @@ int key_pressed(int key, t_data *data)
 	return(1);
 }
 
+int 			get_img_tex_color(t_texture *texture, int x, int y)
+{
+	return (*(unsigned int*)(texture->addr + (y * texture->line_length + x * (texture->bits_per_pixel / 8))));
+}
+
 void            my_mlx_pixel_put(t_img *img, int x, int y, unsigned int color)
 {
 	char *dst;
@@ -718,8 +788,6 @@ void            my_mlx_pixel_put(t_img *img, int x, int y, unsigned int color)
 	dst = img->addr + (y * img->line_length + x * (img->bits_per_pixel / 8));
 	*(unsigned int *) dst = color;
 }
-
-
 
 
 void	verLine(int x, t_data *data)
@@ -737,54 +805,72 @@ void	verLine(int x, t_data *data)
 	}
 }
 
+void	drawRay(t_data *data)
+{
+	data->ray->y = -1;
+	while (++data->ray->y < data->mi->resolution[1])
+	{
+		if (data->ray->y < data->ray->drawStart)
+			my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, data->mi->colors[0]);
+		if (data->ray->y >= data->ray->drawStart && data->ray->y < data->ray->drawEnd)
+		{
+			data->ray->texY = (int)data->ray->texPos & (data->ray->texHeight - 1);
+			data->ray->texPos += data->ray->step;
+			my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, get_img_tex_color(&data->textures[data->ray->texNum], data->ray->texX, data->ray->texY));
+		}
+		if (data->ray->y > data->ray->drawEnd)
+			my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, data->mi->colors[1]);
+	}
+}
+
+
+void	sort_sprites(t_data *data)
+{
+	
+}
+
+
+//void	drawSprites(t_data *data, int i)
+//{
+//	unsigned int color = *(unsigned int *)data->textures[data->ray->texNum].addr[data->ray->texWidth * data->ray->texY + data->ray->texX];
+//	if (color & 0x00FFFFFFF)
+//		my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, color);
+//}
 
 void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 {
-	int x;
+	data->ray->x = -1;
 
-	x = -1;
-
-	unsigned int buffer [mi->resolution[1]][mi->resolution[0]];
-	while(++x < mi->resolution[0])
-	{
-		ray->cameraX = 2 * x / (double)mi->resolution[1] - 1;
+	double ZBuffer[mi->resolution[0]];
+	while(++data->ray->x < mi->resolution[0]) {
+		ray->cameraX = 2 * data->ray->x / (double) mi->resolution[1] - 1;
 		ray->rayDirY = ray->dirY + ray->planeY * ray->cameraX;
 		ray->rayDirX = ray->dirX + ray->planeX * ray->cameraX;
-		ray->mapX = (int)ray->posX;
-		ray->mapY = (int)ray->posY;
-		ray->deltaDistX = fabs(1/ray->rayDirX);
-		ray->deltaDistY = fabs(1/ray->rayDirY);
+		ray->mapX = (int) ray->posX;
+		ray->mapY = (int) ray->posY;
+		ray->deltaDistX = fabs(1 / ray->rayDirX);
+		ray->deltaDistY = fabs(1 / ray->rayDirY);
 		ray->hit = 0;
-		if (ray->rayDirY < 0)
-		{
+		if (ray->rayDirY < 0) {
 			ray->stepY = -1;
 			ray->sideDistY = (ray->posY - ray->mapY) * ray->deltaDistY;
-		}
-		else
-		{
+		} else {
 			ray->stepY = 1;
 			ray->sideDistY = (ray->mapY + 1.0 - ray->posY) * ray->deltaDistY;
 		}
-		if (ray->rayDirX < 0)
-		{
+		if (ray->rayDirX < 0) {
 			ray->stepX = -1;
 			ray->sideDistX = (ray->posX - ray->mapX) * ray->deltaDistX;
-		}
-		else
-		{
+		} else {
 			ray->stepX = 1;
 			ray->sideDistX = (ray->mapX + 1.0 - ray->posX) * ray->deltaDistX;
 		}
-		while (ray->hit == 0)
-		{
-			if (ray->sideDistX < ray->sideDistY)
-			{
+		while (ray->hit == 0) {
+			if (ray->sideDistX < ray->sideDistY) {
 				ray->sideDistX += ray->deltaDistX;
 				ray->mapX += ray->stepX;
 				ray->side = 0;
-			}
-			else
-			{
+			} else {
 				ray->sideDistY += ray->deltaDistY;
 				ray->mapY += ray->stepY;
 				ray->side = 1;
@@ -796,42 +882,90 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 			ray->perpWallDist = (ray->mapX - ray->posX + (1 - ray->stepX) / 2) / ray->rayDirX;
 		else
 			ray->perpWallDist = (ray->mapY - ray->posY + (1 - ray->stepY) / 2) / ray->rayDirY;
-		ray->lineHeight = (int)(mi->resolution[1] / ray->perpWallDist);
+		ray->lineHeight = (int) (mi->resolution[1] / ray->perpWallDist);
 		ray->drawStart = -ray->lineHeight / 2 + mi->resolution[1] / 2;
 		if (ray->drawStart < 0)
 			ray->drawStart = 0;
 		ray->drawEnd = ray->lineHeight / 2 + mi->resolution[1] / 2;
 		if (ray->drawEnd >= mi->resolution[1])
 			ray->drawEnd = mi->resolution[1] - 1;
+		verLine(data->ray->x, data);
 
 
 
-		double wallX;
 		if (ray->side == 0)
-			wallX = ray->posY + ray->perpWallDist * ray->rayDirY;
+			ray->wallX = ray->posY + ray->perpWallDist * ray->rayDirY;
 		else
-			wallX = ray->posX + ray->perpWallDist * ray->rayDirX;
-		wallX -= floor(wallX);
-		int texNum = ray->hit == 1 ? ray->side : 4;
-		int texWidth = data->textures[texNum].width;
-		int texHeight = data->textures[texNum].height;
-		int texX = (int)(wallX * (double)(texWidth));
+			ray->wallX = ray->posX + ray->perpWallDist * ray->rayDirX;
+		ray->wallX -= floor(ray->wallX);
+		ray->texNum = ray->hit == 1 ? ray->side : 4;
+		ray->texWidth = data->textures[ray->texNum].width;
+		ray->texHeight = data->textures[ray->texNum].height;
+		ray->texX = (int) (ray->wallX * (double) (ray->texWidth));
 		if ((ray->side == 0 && ray->rayDirX > 0) || (ray->side == 2 && ray->rayDirY < 0))
-			texX = texWidth - texX - 1;
-		double step = 1.0 * texHeight / ray->lineHeight;
-		double texPos = (ray->drawStart - mi->resolution[1] / 2 + ray->lineHeight / 2) * step;
-		for (int y = ray->drawStart; y < ray->drawEnd; y++)
-		{
-			int texY = (int)texPos & (texHeight - 1);
-			texPos += step;
-			unsigned int color = ((unsigned int *)data->textures[texNum].addr)[texHeight * texY + texX];
-			buffer[y][x] = color;
-		}
-
-
-		//verLine(i, data);
+			ray->texX = ray->texWidth - ray->texX - 1;
+		ray->step = 1.0 * ray->texHeight / ray->lineHeight;
+		ray->texPos = (ray->drawStart - mi->resolution[1] / 2 + ray->lineHeight / 2) * ray->step;
+		drawRay(data);
+		ZBuffer[data->ray->x] = data->ray->perpWallDist;
 	}
 
+
+
+
+		int i = -1;
+		while (++i < data->mi->numSprites)
+		{
+			data->mi->spriteOrder[i] = i;
+			data->mi->spriteDistance[i] = ((data->ray->posX - data->mi->sprites[i].x) * (data->ray->posX - data->mi->sprites[i].x) +
+					(data->ray->posY - data->mi->sprites[i].y));
+		}
+		i = -1;
+		sort_sprites(data);
+		ray->texNum = 4;
+		ray->texWidth = data->textures[ray->texNum].width;
+		ray->texHeight = data->textures[ray->texNum].height;
+		while (++i < data->mi->numSprites)
+		{
+			data->ray->spriteX = data->mi->sprites[data->mi->spriteOrder[i]].x - data->ray->posX;
+			data->ray->spriteY = data->mi->sprites[data->mi->spriteOrder[i]].y - data->ray->posY;
+			data->ray->invDet = 1.0 / (data->ray->planeX * data->ray->dirY - data->ray->dirX * data->ray->spriteY);
+			data->ray->transformX = data->ray->invDet * (data->ray->dirY * data->ray->spriteX - data->ray->dirX * data->ray->spriteY);
+			data->ray->transformY = data->ray->invDet * (-data->ray->planeY * data->ray->spriteX + data->ray->planeX * data->ray->spriteY);
+			data->ray->spriteScreenX = (int)(data->mi->resolution[0] / 2 * (1 + data->ray->transformX/data->ray->transformY));
+			data->ray->spriteHeight = abs((int)(data->mi->resolution[1] / data->ray->transformY));
+			data->ray->drawStartY = -data->ray->spriteHeight / 2 + data->mi->resolution[1] / 2;
+			if (data->ray->drawStartY < 0)
+				data->ray->drawStartY = 0;
+			data->ray->drawEndY = data->ray->spriteHeight / 2 + data->mi->resolution[1] / 2;
+			if (data->ray->drawEndY >= data->mi->resolution[1])
+				data->ray->drawEndY = data->mi->resolution[1] - 1;
+			data->ray->spriteWidth = abs((int)(data->mi->resolution[1] / data->ray->transformY));
+			data->ray->drawStartX = -data->ray->spriteWidth / 2 + data->ray->spriteScreenX;
+			if (data->ray->drawStartX < 0)
+				data->ray->drawStartX = 0;
+			data->ray->drawEndX = data->ray->spriteWidth / 2 + data->ray->spriteScreenX;
+			if (data->ray->drawEndX >= data->mi->resolution[0])
+				data->ray->drawEndX = data->mi->resolution[0] - 1;
+			data->ray->stripe = data->ray->drawStartX - 1;
+			while (++data->ray->stripe < data->ray->drawEndX)
+			{
+				data->ray->texX = ((int)(256 * (data->ray->stripe - (-data->ray->spriteWidth / 2 + data->ray->spriteScreenX)) * data->ray->texWidth / data->ray->spriteWidth)) / 256;
+				if (data->ray->transformY > 0 && data->ray->stripe > 0 && data->ray->stripe < data->mi->resolution[1] && data->ray->transformY < ZBuffer[data->ray->stripe])
+				{
+					for (int y = data->ray->drawStartY; y < data->ray->drawEndY; y++)
+					{
+						int d = y * 256 - data->mi->resolution[1] * 128 + data->ray->spriteHeight * 128;
+						data->ray->texY = ((d * data->ray->texHeight) / data->ray->spriteHeight)/256;
+						//drawSprites(data, i);
+						unsigned int color = *(unsigned int *)(data->textures[data->ray->texNum].addr
+								+ data->ray->texWidth * data->ray->texY + data->ray->texX);
+						if (color & 0x00FFFFFFF)
+							my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, color);
+					}
+				}
+			}
+		}
 	mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->img->img, 0, 0);
 }
 
@@ -902,7 +1036,6 @@ int main (int argc, char **argv)
 //							"11. CHECK FOR SPACES AFTER PATH INFO. UNDEFINED BEHAVIOR.",
 //							"12. filename length > 255",
 //						};
-	double step;
 	t_mi mi;
 	t_img img;
 	t_mlx mlx;
@@ -910,8 +1043,7 @@ int main (int argc, char **argv)
 	t_ray ray;
 	t_texture *textures;
 	textures = malloc (sizeof(t_texture) * 5);
-	step = 1;
-	if (import_config(argc, argv, &mi, step) >= 0)
+	if (import_config(argc, argv, &mi) >= 0)
 	{
 		mlx.mlx = mlx_init();
 		mlx.win = mlx_new_window(mlx.mlx, mi.resolution[0], mi.resolution[1], "cub3D");
