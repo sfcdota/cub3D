@@ -826,7 +826,28 @@ void	drawRay(t_data *data)
 
 void	sort_sprites(t_data *data)
 {
-	
+	int i;
+	int j;
+	int temp1;
+	double temp2;
+
+	i = -1;
+	while (++i < data->mi->numSprites)
+	{
+		j = -1;
+		while (++j < data->mi->numSprites - 1)
+		{
+			if (data->mi->spriteDistance[i] > data->mi->spriteDistance[i + 1])
+			{
+				temp1 = data->mi->spriteOrder[i];
+				data->mi->spriteOrder[i] = data->mi->spriteOrder[i + 1];
+				data->mi->spriteOrder[i + 1] = temp1;
+				temp2 = data->mi->spriteDistance[i];
+				data->mi->spriteDistance[i] = data->mi->spriteDistance[i + 1];
+				data->mi->spriteDistance[i + 1] = temp2;
+			}
+		}
+	}
 }
 
 
@@ -950,7 +971,7 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 			data->ray->stripe = data->ray->drawStartX - 1;
 			while (++data->ray->stripe < data->ray->drawEndX)
 			{
-				data->ray->texX = ((int)(256 * (data->ray->stripe - (-data->ray->spriteWidth / 2 + data->ray->spriteScreenX)) * data->ray->texWidth / data->ray->spriteWidth)) / 256;
+				data->ray->texX = ((int)(256.0 * (data->ray->stripe - (-data->ray->spriteWidth / 2 + data->ray->spriteScreenX)) * data->ray->texWidth / data->ray->spriteWidth)) / 256;
 				if (data->ray->transformY > 0 && data->ray->stripe > 0 && data->ray->stripe < data->mi->resolution[1] && data->ray->transformY < ZBuffer[data->ray->stripe])
 				{
 					for (int y = data->ray->drawStartY; y < data->ray->drawEndY; y++)
@@ -972,7 +993,7 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 
 int render(int key, t_data *data)
 {
-	double dist;
+
 
 
 	key_pressed(key, data);
