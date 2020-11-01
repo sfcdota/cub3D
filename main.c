@@ -56,7 +56,6 @@ typedef struct		s_img
 	int	 	bits_per_pixel;
 	int 	line_length;
 	int 	endian;
-	int 	offset;
 }					t_img;
 
 typedef struct		s_mlx
@@ -81,7 +80,6 @@ typedef struct		s_ray
 {
 	double posX;
 	double posY;
-	double angle;
 	double dirX;
 	double dirY;
 	double planeX;
@@ -126,7 +124,8 @@ typedef struct		s_ray
 	int drawStartX;
 	int drawEndX;
 	int stripe;
-
+	double *ZBuffer;
+	int i;
 }					t_ray;
 
 typedef struct		s_data
@@ -682,8 +681,7 @@ void	print_map(t_data *data)
 		printf("\n");
 		i++;
 	}
-	printf("ppos[0] = %lf\t ppos[1] = %lf\n"
-		"angle = %lf", data->ray->posY, data->ray->posX, data->ray->angle);
+	printf("ppos[0] = %lf\t ppos[1] = %lf\n", data->ray->posY, data->ray->posX);
 }
 
 void 	clear_mi(t_mi *mi)
@@ -734,44 +732,33 @@ int import_config(int argc, char **argv, t_mi *mi)
 
 
 
-void key_pressed(int key, t_data *data)
+void key_pressed(int key, t_mi *mi, t_ray *ray, t_data *data)
 {
 	double rotSpeed = 0.25;
 	double moveSpeed = key == 13 || key == 0 ? 0.5 : -0.5;
 	if (key == 13 || key == 1)
 	{
-		if (data->mi->map[(int)(data->ray->posX + 1.5 * data->ray->dirX * moveSpeed)][(int)data->ray->posY] != '1')
-			data->ray->posX += data->ray->dirX * moveSpeed;
-		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY +  1.5 * data->ray->dirY * moveSpeed)] != '1')
-			data->ray->posY += data->ray->dirY * moveSpeed;
+		if (mi->map[(int)(ray->posX + 1.5 * ray->dirX * moveSpeed)][(int)ray->posY] != '1')
+			ray->posX += ray->dirX * moveSpeed;
+		if (mi->map[(int)(ray->posX)][(int)(ray->posY +  1.5 * ray->dirY * moveSpeed)] != '1')
+			ray->posY += ray->dirY * moveSpeed;
 	}
 	if (key == 0 || key == 2)
 	{
-		if (data->mi->map[(int)(data->ray->posX - 1.5 * data->ray->dirY * moveSpeed)][(int)data->ray->posY] != '1')
-			data->ray->posX -= data->ray->dirY * moveSpeed;
-		if (data->mi->map[(int)(data->ray->posX)][(int)(data->ray->posY +  1.5 * data->ray->dirX * moveSpeed)] != '1')
-			data->ray->posY += data->ray->dirX * moveSpeed;
+		if (mi->map[(int)(ray->posX - 1.5 * ray->dirY * moveSpeed)][(int)ray->posY] != '1')
+			ray->posX -= ray->dirY * moveSpeed;
+		if (mi->map[(int)(ray->posX)][(int)(ray->posY +  1.5 * ray->dirX * moveSpeed)] != '1')
+			ray->posY += ray->dirX * moveSpeed;
 	}
 	if (key == 123 || key == 124)
 	{
 		rotSpeed *= key == 123 ? 1 : -1;
-		if (key == 123)
-		{
-			if (data->ray->angle > 4 * M_PI)
-				data->ray->angle -= 2 * M_PI;
-		}
-		if (key == 124)
-		{
-			if (data->ray->angle < -4 * M_PI)
-				data->ray->angle += 2 * M_PI;
-		}
-		double oldDirX = data->ray->dirX;
-		data->ray->dirX = data->ray->dirX * cos(rotSpeed) - data->ray->dirY * sin(rotSpeed);
-		data->ray->dirY = oldDirX * sin(rotSpeed) + data->ray->dirY * cos(rotSpeed);
-		double oldPlaneX = data->ray->planeX;
-		data->ray->planeX = data->ray->planeX * cos(rotSpeed) - data->ray->planeY * sin (rotSpeed);
-		data->ray->planeY = oldPlaneX * sin (rotSpeed) + data->ray->planeY * cos (rotSpeed);
-		data->ray->angle += rotSpeed;
+		double oldDirX = ray->dirX;
+		ray->dirX = ray->dirX * cos(rotSpeed) - ray->dirY * sin(rotSpeed);
+		ray->dirY = oldDirX * sin(rotSpeed) + ray->dirY * cos(rotSpeed);
+		double oldPlaneX = ray->planeX;
+		ray->planeX = ray->planeX * cos(rotSpeed) - ray->planeY * sin (rotSpeed);
+		ray->planeY = oldPlaneX * sin (rotSpeed) + ray->planeY * cos (rotSpeed);
 	}
 	print_map(data);
 }
@@ -805,26 +792,26 @@ void	verLine(int x, t_data *data)
 	}
 }
 
-void	drawRay(t_data *data)
+void	drawRay(t_mi *mi, t_ray *ray, t_data *data)
 {
-	data->ray->y = -1;
-	while (++data->ray->y < data->mi->resolution[1])
+	ray->y = -1;
+	while (++ray->y < mi->resolution[1])
 	{
-		if (data->ray->y < data->ray->drawStart)
-			my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, data->mi->colors[0]);
-		if (data->ray->y >= data->ray->drawStart && data->ray->y < data->ray->drawEnd)
+		if (ray->y < ray->drawStart)
+			my_mlx_pixel_put(data->img, ray->x, ray->y, mi->colors[0]);
+		if (ray->y >= ray->drawStart && ray->y < ray->drawEnd)
 		{
-			data->ray->texY = (int)data->ray->texPos & (data->ray->texHeight - 1);
-			data->ray->texPos += data->ray->step;
-			my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, get_img_tex_color(&data->textures[data->ray->texNum], data->ray->texX, data->ray->texY));
+			ray->texY = (int)ray->texPos & (ray->texHeight - 1);
+			ray->texPos += ray->step;
+			my_mlx_pixel_put(data->img, ray->x, ray->y, get_img_tex_color(&data->textures[ray->texNum], ray->texX, ray->texY));
 		}
-		if (data->ray->y > data->ray->drawEnd)
-			my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, data->mi->colors[1]);
+		if (ray->y > ray->drawEnd)
+			my_mlx_pixel_put(data->img, ray->x, ray->y, mi->colors[1]);
 	}
 }
 
 
-void	sort_sprites(t_data *data)
+void	sort_sprites(t_mi *mi, t_data *data)
 {
 	int i;
 	int j;
@@ -832,19 +819,19 @@ void	sort_sprites(t_data *data)
 	double temp2;
 
 	i = -1;
-	while (++i < data->mi->numSprites)
+	while (++i < mi->numSprites)
 	{
 		j = -1;
-		while (++j < data->mi->numSprites - 1)
+		while (++j < mi->numSprites - 1)
 		{
-			if (data->mi->spriteDistance[j] < data->mi->spriteDistance[j + 1])
+			if (mi->spriteDistance[j] < mi->spriteDistance[j + 1])
 			{
-				temp1 = data->mi->spriteOrder[j];
-				data->mi->spriteOrder[j] = data->mi->spriteOrder[j + 1];
-				data->mi->spriteOrder[j + 1] = temp1;
-				temp2 = data->mi->spriteDistance[j];
-				data->mi->spriteDistance[j] = data->mi->spriteDistance[j + 1];
-				data->mi->spriteDistance[j + 1] = temp2;
+				temp1 = mi->spriteOrder[j];
+				mi->spriteOrder[j] = mi->spriteOrder[j + 1];
+				mi->spriteOrder[j + 1] = temp1;
+				temp2 = mi->spriteDistance[j];
+				mi->spriteDistance[j] = mi->spriteDistance[j + 1];
+				mi->spriteDistance[j + 1] = temp2;
 			}
 		}
 	}
@@ -858,13 +845,166 @@ void	sort_sprites(t_data *data)
 //		my_mlx_pixel_put(data->img, data->ray->x, data->ray->y, color);
 //}
 
+void	setWallsStartConditions(t_mi *mi, t_ray *ray, t_data *data)
+{
+	ray->cameraX = 2.0 * ray->x / mi->resolution[0] - 1;
+	ray->rayDirY = ray->dirY + ray->planeY * ray->cameraX;
+	ray->rayDirX = ray->dirX + ray->planeX * ray->cameraX;
+	ray->mapX = (int) ray->posX;
+	ray->mapY = (int) ray->posY;
+	ray->deltaDistX = fabs(1 / ray->rayDirX);
+	ray->deltaDistY = fabs(1 / ray->rayDirY);
+	ray->hit = 0;
+	ray->stepY = ray->rayDirY < 0 ? -1 : 1;
+	ray->sideDistY = ray->rayDirY < 0 ? (ray->posY - ray->mapY) * ray->deltaDistY
+									  : (ray->mapY + 1.0 - ray->posY) * ray->deltaDistY;
+	ray->stepX = ray->rayDirX < 0 ? -1 : 1;
+	ray->sideDistX = ray->rayDirX < 0 ? (ray->posX - ray->mapX) * ray->deltaDistX
+									  : (ray->mapX + 1.0 - ray->posX) * ray->deltaDistX;
+}
+
+void	performDDA(t_mi *mi, t_ray *ray, t_data *data)
+{
+	while (ray->hit == 0)
+	{
+		if (ray->sideDistX < ray->sideDistY)
+		{
+			ray->sideDistX += ray->deltaDistX;
+			ray->mapX += ray->stepX;
+			ray->side = ray->rayDirX > 0 ? 0 : 1;
+		}
+		else
+		{
+			ray->sideDistY += ray->deltaDistY;
+			ray->mapY += ray->stepY;
+			ray->side = ray->rayDirY > 0 ? 3 : 2;
+		}
+		if (mi->map[ray->mapX][ray->mapY] == '1')
+			ray->hit = mi->map[ray->mapX][ray->mapY] - '0';
+	}
+	ray->perpWallDist = ray->side == 0 || ray->side == 1 ?
+						(ray->mapX - ray->posX + (1 - ray->stepX) / 2) / ray->rayDirX
+														 :(ray->mapY - ray->posY + (1 - ray->stepY) / 2) / ray->rayDirY;
+	ray->lineHeight = (int) (mi->resolution[1] / ray->perpWallDist);
+	ray->drawStart = -ray->lineHeight / 2 + mi->resolution[1] / 2;
+	ray->drawStart = ray->drawStart < 0 ? 0 : ray->drawStart;
+	ray->drawEnd = ray->lineHeight / 2 + mi->resolution[1] / 2;
+	ray->drawEnd = ray->drawEnd >= mi->resolution[1] ? mi->resolution[1] - 1 : ray->drawEnd;
+}
+
+void	drawWalls(t_mi *mi, t_ray *ray, t_data *data)
+{
+	ray->x = -1;
+	while(++ray->x < mi->resolution[0])
+	{
+		setWallsStartConditions(mi, ray, data);
+		performDDA(mi, ray, data);
+		ray->wallX = ray->side == 0 || ray->side == 1 ?
+			ray->posY + ray->perpWallDist * ray->rayDirY :
+			ray->posX + ray->perpWallDist * ray->rayDirX;
+		ray->wallX -= floor(ray->wallX);
+		ray->texNum = ray->side;
+		ray->texWidth = data->textures[ray->texNum].width;
+		ray->texHeight = data->textures[ray->texNum].height;
+		ray->texX = (int) (ray->wallX * 1.0 * (ray->texWidth));
+		if ((!ray->side && ray->rayDirX > 0) ||
+			(ray->side == 2 && ray->rayDirY < 0))
+			ray->texX = ray->texWidth - ray->texX - 1;
+		ray->step = 1.0 * ray->texHeight / ray->lineHeight;
+		ray->texPos = (ray->drawStart - mi->resolution[1] / 2 +
+							 ray->lineHeight / 2)
+							* ray->step;
+		drawRay(mi, ray, data);
+		ray->ZBuffer[ray->x] =ray->perpWallDist;
+	}
+}
+
+void	spritesStartConditions(t_mi *mi, t_ray *ray, t_data *data)
+{
+	ray->i = -1;
+	while (++ray->i < mi->numSprites)
+	{
+		mi->spriteOrder[ray->i] = ray->i;
+		mi->spriteDistance[ray->i] = ((ray->posX - mi->sprites[ray->i].x) * (ray->posX - mi->sprites[ray->i].x) +
+									  (ray->posY - mi->sprites[ray->i].y) * (ray->posY - mi->sprites[ray->i].y));
+	}
+	ray->i = -1;
+	sort_sprites(mi, data);
+	ray->texNum = 4;
+	ray->texWidth = data->textures[ray->texNum].width;
+	ray->texHeight = data->textures[ray->texNum].height;
+}
+
+void	calcSprites(t_mi *mi, t_ray *ray, t_data *data)
+{
+	ray->spriteX =  mi->sprites[mi->spriteOrder[ray->i]].x - ray->posX + 0.5;
+	ray->spriteY =  mi->sprites[mi->spriteOrder[ray->i]].y - ray->posY + 0.5;
+	ray->invDet = 1.0 / (ray->planeX * ray->dirY - ray->dirX * ray->planeY);
+	ray->transformX = ray->invDet * (ray->dirY * ray->spriteX - ray->dirX * ray->spriteY);
+	ray->transformY = ray->invDet * (-ray->planeY * ray->spriteX + ray->planeX * ray->spriteY);
+	ray->spriteScreenX = (int)(mi->resolution[0] / 2 * (1 + ray->transformX/ray->transformY));
+	ray->spriteHeight = abs((int)(mi->resolution[1] / ray->transformY));
+	ray->drawStartY = -ray->spriteHeight / 2 + mi->resolution[1] / 2;
+	if (ray->drawStartY < 0)
+		ray->drawStartY = 0;
+	ray->drawEndY = ray->spriteHeight / 2 + mi->resolution[1] / 2;
+	if (ray->drawEndY >= mi->resolution[1])
+		ray->drawEndY = mi->resolution[1] - 1;
+	ray->spriteWidth = abs((int)(mi->resolution[1] / ray->transformY));
+	ray->drawStartX = -ray->spriteWidth / 2 + ray->spriteScreenX;
+	if (ray->drawStartX < 0)
+		ray->drawStartX = 0;
+	ray->drawEndX = ray->spriteWidth / 2 + ray->spriteScreenX;
+	if (ray->drawEndX >= mi->resolution[0])
+		ray->drawEndX = mi->resolution[0] - 1;
+	ray->stripe = ray->drawStartX - 1;
+}
+
+void	putSprites(t_mi *mi, t_ray *ray, t_data *data)
+{
+	while (++ray->stripe < ray->drawEndX)
+	{
+		ray->texX = ((int)(256.0 * (ray->stripe - (-ray->spriteWidth / 2 + ray->spriteScreenX))
+						   * ray->texWidth / ray->spriteWidth)) / 256;
+		if (ray->transformY > 0 && ray->stripe > 0 && ray->stripe < mi->resolution[0]
+			&& ray->transformY < ray->ZBuffer[ray->stripe])
+		{
+			ray->y = ray->drawStartY - 1;
+			while (++ray->y < ray->drawEndY)
+			{
+				int d = ray->y * 256 - mi->resolution[1] * 128 + ray->spriteHeight * 128;
+				ray->texY = ((d * ray->texHeight) / ray->spriteHeight)/256;
+				//drawSprites(data, i);
+				int color = get_img_tex_color(&data->textures[ray->texNum], ray->texX, ray->texY);
+				if ((color & 0x00FFFFFFF) != 0)
+					my_mlx_pixel_put(data->img, ray->stripe, ray->y, color);
+			}
+		}
+	}
+}
+
+void	drawSprites(t_mi *mi, t_ray *ray, t_data *data)
+{
+	spritesStartConditions(mi, ray, data);
+	while (++ray->i < mi->numSprites)
+	{
+		calcSprites(mi, ray, data);
+		putSprites(mi, ray, data);
+	}
+}
+
+void	raycasting(t_mi *mi, t_ray *ray, t_data *data)
+{
+	drawWalls(mi,ray,data);
+	drawSprites(mi, ray, data);
+	mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->img->img, 0, 0);
+}
 void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 {
-	data->ray->x = -1;
-
-	double ZBuffer[mi->resolution[0]];
-	while(++data->ray->x < mi->resolution[0]) {
-		ray->cameraX = 2 * data->ray->x / (double) mi->resolution[0] - 1;
+	ray->x = -1;
+	while(++ray->x < mi->resolution[0])
+	{
+		ray->cameraX = 2.0 * ray->x / mi->resolution[0] - 1;
 		ray->rayDirY = ray->dirY + ray->planeY * ray->cameraX;
 		ray->rayDirX = ray->dirX + ray->planeX * ray->cameraX;
 		ray->mapX = (int) ray->posX;
@@ -872,26 +1012,22 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 		ray->deltaDistX = fabs(1 / ray->rayDirX);
 		ray->deltaDistY = fabs(1 / ray->rayDirY);
 		ray->hit = 0;
-		if (ray->rayDirY < 0) {
-			ray->stepY = -1;
-			ray->sideDistY = (ray->posY - ray->mapY) * ray->deltaDistY;
-		} else {
-			ray->stepY = 1;
-			ray->sideDistY = (ray->mapY + 1.0 - ray->posY) * ray->deltaDistY;
-		}
-		if (ray->rayDirX < 0) {
-			ray->stepX = -1;
-			ray->sideDistX = (ray->posX - ray->mapX) * ray->deltaDistX;
-		} else {
-			ray->stepX = 1;
-			ray->sideDistX = (ray->mapX + 1.0 - ray->posX) * ray->deltaDistX;
-		}
-		while (ray->hit == 0) {
-			if (ray->sideDistX < ray->sideDistY) {
+		ray->stepY = ray->rayDirY < 0 ? -1 : 1;
+		ray->sideDistY = ray->rayDirY < 0 ? (ray->posY - ray->mapY) * ray->deltaDistY
+				: (ray->mapY + 1.0 - ray->posY) * ray->deltaDistY;
+		ray->stepX = ray->rayDirX < 0 ? -1 : 1;
+		ray->sideDistX = ray->rayDirX < 0 ? (ray->posX - ray->mapX) * ray->deltaDistX
+				: (ray->mapX + 1.0 - ray->posX) * ray->deltaDistX;
+		while (ray->hit == 0)
+		{
+			if (ray->sideDistX < ray->sideDistY)
+			{
 				ray->sideDistX += ray->deltaDistX;
 				ray->mapX += ray->stepX;
 				ray->side = ray->rayDirX > 0 ? 0 : 1;
-			} else {
+			}
+			else
+			{
 				ray->sideDistY += ray->deltaDistY;
 				ray->mapY += ray->stepY;
 				ray->side = ray->rayDirY > 0 ? 3 : 2;
@@ -899,93 +1035,92 @@ void	calcDist(t_mi *mi, t_ray *ray, t_data *data)
 			if (mi->map[ray->mapX][ray->mapY] == '1')
 				ray->hit = mi->map[ray->mapX][ray->mapY] - '0';
 		}
-		if (ray->side == 0 || ray->side == 1)
-			ray->perpWallDist = (ray->mapX - ray->posX + (1 - ray->stepX) / 2) / ray->rayDirX;
-		else
-			ray->perpWallDist = (ray->mapY - ray->posY + (1 - ray->stepY) / 2) / ray->rayDirY;
+		ray->perpWallDist = ray->side == 0 || ray->side == 1 ?
+			(ray->mapX - ray->posX + (1 - ray->stepX) / 2) / ray->rayDirX
+			:(ray->mapY - ray->posY + (1 - ray->stepY) / 2) / ray->rayDirY;
 		ray->lineHeight = (int) (mi->resolution[1] / ray->perpWallDist);
 		ray->drawStart = -ray->lineHeight / 2 + mi->resolution[1] / 2;
-		if (ray->drawStart < 0)
-			ray->drawStart = 0;
+		ray->drawStart = ray->drawStart < 0 ? 0 : ray->drawStart;
 		ray->drawEnd = ray->lineHeight / 2 + mi->resolution[1] / 2;
-		if (ray->drawEnd >= mi->resolution[1])
-			ray->drawEnd = mi->resolution[1] - 1;
-		//verLine(data->ray->x, data);
+		ray->drawEnd = ray->drawEnd >= mi->resolution[1] ? mi->resolution[1] - 1 : ray->drawEnd;
 
 
 
-		if (ray->side == 0 || ray->side == 1)
-			ray->wallX = ray->posY + ray->perpWallDist * ray->rayDirY;
-		else
-			ray->wallX = ray->posX + ray->perpWallDist * ray->rayDirX;
+
+
+
+
+		ray->wallX = ray->side == 0 || ray->side == 1 ?
+				ray->posY + ray->perpWallDist * ray->rayDirY :
+				ray->posX + ray->perpWallDist * ray->rayDirX;
 		ray->wallX -= floor(ray->wallX);
 		ray->texNum = ray->side;
 		ray->texWidth = data->textures[ray->texNum].width;
 		ray->texHeight = data->textures[ray->texNum].height;
-		ray->texX = (int) (ray->wallX * (double) (ray->texWidth));
-		if ((ray->side == 0 && ray->rayDirX > 0) || (ray->side == 2 && ray->rayDirY < 0))
+		ray->texX = (int)(ray->wallX * 1.0 * (ray->texWidth));
+		if ((!ray->side && ray->rayDirX > 0) || (ray->side == 2 && ray->rayDirY < 0))
 			ray->texX = ray->texWidth - ray->texX - 1;
 		ray->step = 1.0 * ray->texHeight / ray->lineHeight;
-		ray->texPos = (ray->drawStart - mi->resolution[1] / 2 + ray->lineHeight / 2) * ray->step;
-		drawRay(data);
-		ZBuffer[data->ray->x] = data->ray->perpWallDist;
+		ray->texPos = (ray->drawStart - mi->resolution[1] / 2 + ray->lineHeight / 2)
+				* ray->step;
+		drawRay(mi, ray, data);
+		ray->ZBuffer[ray->x] = ray->perpWallDist;
 	}
 
 
 
 
-		int i = -1;
-		while (++i < data->mi->numSprites)
+		ray->i = -1;
+		while (++ray->i < mi->numSprites)
 		{
-			data->mi->spriteOrder[i] = i;
-			data->mi->spriteDistance[i] = ((data->ray->posX - data->mi->sprites[i].x) * (data->ray->posX - data->mi->sprites[i].x) +
-					(data->ray->posY - data->mi->sprites[i].y) * (data->ray->posY - data->mi->sprites[i].y));
-			//data->mi->spriteDistance[i] = hypot(data->ray->posX - data->mi->sprites[i].x,data->ray->posY - data->mi->sprites[i].y);
+			mi->spriteOrder[ray->i] = ray->i;
+			mi->spriteDistance[ray->i] = ((ray->posX - mi->sprites[ray->i].x) * (ray->posX - mi->sprites[ray->i].x) +
+					(ray->posY - mi->sprites[ray->i].y) * (ray->posY - mi->sprites[ray->i].y));
 		}
-		i = -1;
-		sort_sprites(data);
+		ray->i = -1;
+		sort_sprites(mi, data);
 		ray->texNum = 4;
 		ray->texWidth = data->textures[ray->texNum].width;
 		ray->texHeight = data->textures[ray->texNum].height;
-		while (++i < data->mi->numSprites)
+		while (++ray->i < mi->numSprites)
 		{
-			data->ray->spriteX =  data->mi->sprites[data->mi->spriteOrder[i]].x - data->ray->posX + 0.5;
-			data->ray->spriteY =  data->mi->sprites[data->mi->spriteOrder[i]].y - data->ray->posY + 0.5;
-			data->ray->invDet = 1.0 / (data->ray->planeX * data->ray->dirY - data->ray->dirX * data->ray->planeY);
-			data->ray->transformX = data->ray->invDet * (data->ray->dirY * data->ray->spriteX - data->ray->dirX * data->ray->spriteY);
-			data->ray->transformY = data->ray->invDet * (-data->ray->planeY * data->ray->spriteX + data->ray->planeX * data->ray->spriteY);
-			data->ray->spriteScreenX = (int)(data->mi->resolution[0] / 2 * (1 + data->ray->transformX/data->ray->transformY));
-			data->ray->spriteHeight = abs((int)(data->mi->resolution[1] / data->ray->transformY));
-			data->ray->drawStartY = -data->ray->spriteHeight / 2 + data->mi->resolution[1] / 2;
-			if (data->ray->drawStartY < 0)
-				data->ray->drawStartY = 0;
-			data->ray->drawEndY = data->ray->spriteHeight / 2 + data->mi->resolution[1] / 2;
-			if (data->ray->drawEndY >= data->mi->resolution[1])
-				data->ray->drawEndY = data->mi->resolution[1] - 1;
-			data->ray->spriteWidth = abs((int)(data->mi->resolution[1] / data->ray->transformY));
-			data->ray->drawStartX = -data->ray->spriteWidth / 2 + data->ray->spriteScreenX;
-			if (data->ray->drawStartX < 0)
-				data->ray->drawStartX = 0;
-			data->ray->drawEndX = data->ray->spriteWidth / 2 + data->ray->spriteScreenX;
-			if (data->ray->drawEndX >= data->mi->resolution[0])
-				data->ray->drawEndX = data->mi->resolution[0] - 1;
-			data->ray->stripe = data->ray->drawStartX - 1;
-			while (++data->ray->stripe < data->ray->drawEndX)
+			ray->spriteX =  mi->sprites[mi->spriteOrder[ray->i]].x - ray->posX + 0.5;
+			ray->spriteY =  mi->sprites[mi->spriteOrder[ray->i]].y - ray->posY + 0.5;
+			ray->invDet = 1.0 / (ray->planeX * ray->dirY - ray->dirX * ray->planeY);
+			ray->transformX = ray->invDet * (ray->dirY * ray->spriteX - ray->dirX * ray->spriteY);
+			ray->transformY = ray->invDet * (-ray->planeY * ray->spriteX + ray->planeX * ray->spriteY);
+			ray->spriteScreenX = (int)(mi->resolution[0] / 2 * (1 + ray->transformX/ray->transformY));
+			ray->spriteHeight = abs((int)(mi->resolution[1] / ray->transformY));
+			ray->drawStartY = -ray->spriteHeight / 2 + mi->resolution[1] / 2;
+			if (ray->drawStartY < 0)
+				ray->drawStartY = 0;
+			ray->drawEndY = ray->spriteHeight / 2 + mi->resolution[1] / 2;
+			if (ray->drawEndY >= mi->resolution[1])
+				ray->drawEndY = mi->resolution[1] - 1;
+			ray->spriteWidth = abs((int)(mi->resolution[1] / ray->transformY));
+			ray->drawStartX = -ray->spriteWidth / 2 + ray->spriteScreenX;
+			if (ray->drawStartX < 0)
+				ray->drawStartX = 0;
+			ray->drawEndX = ray->spriteWidth / 2 + ray->spriteScreenX;
+			if (ray->drawEndX >= mi->resolution[0])
+				ray->drawEndX = mi->resolution[0] - 1;
+			ray->stripe = ray->drawStartX - 1;
+			while (++ray->stripe < ray->drawEndX)
 			{
-				data->ray->texX = ((int)(256.0 * (data->ray->stripe - (-data->ray->spriteWidth / 2 + data->ray->spriteScreenX))
-						* data->ray->texWidth / data->ray->spriteWidth)) / 256;
-				if (data->ray->transformY > 0 && data->ray->stripe > 0 && data->ray->stripe < data->mi->resolution[0]
-				&& data->ray->transformY < ZBuffer[data->ray->stripe])
+				ray->texX = ((int)(256.0 * (ray->stripe - (-ray->spriteWidth / 2 + ray->spriteScreenX))
+						* ray->texWidth / ray->spriteWidth)) / 256;
+				if (ray->transformY > 0 && ray->stripe > 0 && ray->stripe < mi->resolution[0]
+				&& ray->transformY < ray->ZBuffer[ray->stripe])
 				{
-					data->ray->y = data->ray->drawStartY - 1;
-					while (++data->ray->y < data->ray->drawEndY)
+					ray->y = ray->drawStartY - 1;
+					while (++ray->y < ray->drawEndY)
 					{
-						int d = data->ray->y * 256 - data->mi->resolution[1] * 128 + data->ray->spriteHeight * 128;
-						data->ray->texY = ((d * data->ray->texHeight) / data->ray->spriteHeight)/256;
+						int d = ray->y * 256 - mi->resolution[1] * 128 + ray->spriteHeight * 128;
+						ray->texY = ((d * ray->texHeight) / ray->spriteHeight)/256;
 						//drawSprites(data, i);
-						unsigned  int color = get_img_tex_color(&data->textures[data->ray->texNum],data->ray->texX, data->ray->texY);
+						int color = get_img_tex_color(&data->textures[ray->texNum], ray->texX, ray->texY);
 						if ((color & 0x00FFFFFFF) != 0)
-							my_mlx_pixel_put(data->img, data->ray->stripe, data->ray->y, color);
+							my_mlx_pixel_put(data->img, ray->stripe, ray->y, color);
 					}
 				}
 			}
@@ -999,9 +1134,10 @@ int render(int key, t_data *data)
 
 
 
-	key_pressed(key, data);
+	key_pressed(key, data->mi, data->ray, data);
 
-	calcDist(data->mi, data->ray, data);
+	raycasting(data->mi, data->ray, data);
+	//calcDist(data->mi, data->ray, data);
 
 }
 
@@ -1027,14 +1163,13 @@ void	adjust_vectors(t_data *data)
 {
 	double diff_angle;
 
-	diff_angle = data->ray->angle - M_PI_2;
+	diff_angle = data->mi->angle - M_PI_2;
 	double oldDirX = data->ray->dirX;
 	data->ray->dirX = data->ray->dirX * cos(diff_angle) - data->ray->dirY * sin (diff_angle);
 	data->ray->dirY = oldDirX * sin(diff_angle) + data->ray->dirY * cos(diff_angle);
 	double oldPlaneX = data->ray->planeX;
 	data->ray->planeX = data->ray->planeX * cos(diff_angle) - data->ray->planeY * sin (diff_angle);
 	data->ray->planeY = oldPlaneX * sin (diff_angle) + data->ray->planeY * cos (diff_angle);
-	data->ray->angle += diff_angle;
 }
 
 
@@ -1079,12 +1214,12 @@ int main (int argc, char **argv)
 		data.ray = &ray;
 		ray.posX = data.mi->x;
 		ray.posY = data.mi->y;
-		ray.angle = data.mi->angle;
 		ray.planeX = 0.0;
 		ray.planeY = 0.66;
 		ray.dirX = -1;
 		ray.dirY = 0;
-		if (ray.angle != M_PI_2)
+		ray.ZBuffer = malloc (mi.resolution[0] * sizeof(double));
+		if (mi.angle != M_PI_2)
 			adjust_vectors(&data);
 		data.textures = textures;
 		import_textures(&data);
