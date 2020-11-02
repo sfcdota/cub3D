@@ -164,7 +164,6 @@ typedef struct	s_ray
 	double		*z_buffer;
 	int			i;
 	double		temp_d;
-	double		temp_d2;
 	int			temp_i;
 	int			temp_i2;
 	int			temp_i3;
@@ -187,7 +186,6 @@ void			init_texture(t_data *data, int index);
 int				is_in_set(char c, char const *set);
 void			set_player_start_pos(t_mi *mi, int i, int j);
 int				is_space(char c);
-int				is_digit(char c);
 char			*next_non_space(char *line);
 char			*next_non_digit(char *line);
 char			*next_till_eol(char *line);
@@ -217,7 +215,7 @@ void			check_right(t_mi *mi, t_data *data, int i, int j);
 void			check_up(t_mi *mi, t_data *data, int i, int j);
 void			check_down(t_mi *mi, t_data *data, int i, int j);
 void			is_closed(t_mi *mi, t_data *data, int i, int j);
-int				check_map(t_mi *mi, t_data *data);
+void			check_map(t_mi *mi, t_data *data);
 void			parse_sprites_info(t_mi *mi, t_data *data);
 void			parse_config(t_mi *mi, char *filename, t_data *data);
 void			parsing(int argc, char **argv, t_mi *mi, t_data *data);
@@ -236,7 +234,7 @@ void			prog_error(t_data *data, int error_code);
 
 void			handle_move(int key, t_mi *mi, t_ray *ray);
 void			handle_rotate(t_ray *ray, double rotation);
-int				handle_exit(t_data *data);
+void			handle_exit(t_data *data);
 void			key_pressed(int key, t_mi *mi, t_ray *ray, t_data *data);
 
 /*
@@ -254,7 +252,7 @@ void			sprites_start_conditions(t_mi *mi, t_ray *ray, t_data *data);
 void			calc_sprites(t_mi *mi, t_ray *ray);
 void			put_sprites(t_mi *mi, t_ray *ray, t_data *data);
 void			draw_sprites(t_mi *mi, t_ray *ray, t_data *data);
-int				render(int key, t_data *data);
+void			render(int key, t_data *data);
 void			init_game(t_mi *mi, t_mlx *mlx, t_img *img, t_data *data);
 
 #endif

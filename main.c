@@ -24,14 +24,15 @@ int	main(int argc, char **argv)
 	data.img = &img;
 	data.mi = &mi;
 	data.ray = &ray;
-	init_messages(&mi, &data);
 	initialize_mi(&mi, &data);
 	if (!(data.mlx->mlx = mlx_init()))
 		prog_error(&data, SYS_ERROR);
 	parsing(argc, argv, &mi, &data);
 	init_game(&mi, &mlx, &img, &data);
 	render(-1, &data);
-	if (!mi.save)
+	if (mi.save)
+		clear(&mi, &data);
+	else
 	{
 		mlx_hook(mlx.win, KEY_PRESS_EVENT, KEY_PRESS_MASK, render, &data);
 		mlx_hook(mlx.win, DESTROY_NOTIFY, DESTROY_NOTIFY_MASK,
