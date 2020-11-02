@@ -28,7 +28,19 @@
 # define KEY_PRESS_MASK 0
 # define DESTROY_NOTIFY 17
 # define DESTROY_NOTIFY_MASK 17
+# define RESOLUTION_WIDTH_MAX 2560
+# define RESOLUTION_HEIGHT_MAX 1440
 # define EXIT_MESSAGE "\nExit. Thanks for playing.\n"
+# define SYS_ERROR 0
+# define INVALID_RESOLUTION 1
+# define INVALID_COLOR 2
+# define INVALID_MAP 3
+# define INVALID_TEXTURE 4
+# define DUPLICATE_TEXTURES 5
+# define FLAGS_REDIFINITION 5
+# define NO_MAP 6
+# define INVALID_CONFIG 6
+
 
 /*
  **************		STRUCTS		**************
@@ -67,6 +79,7 @@ typedef struct	s_mi
 	double		r_speed;
 	double		m_speed;
 	char		*current_line;
+	char 		**error_messages;
 
 }				t_mi;
 
@@ -169,7 +182,7 @@ void			clear_ptr(void *ptr);
 void			clear_ptrs(void *ptr1, void *ptr2, void *ptr3, void *ptr4);
 void			clear(t_mi *mi, t_data *data);
 void			sys_error(t_data *data);
-void			prog_error(t_data *data, char *message, int error_code);
+void			prog_error(t_data *data, int error_code);
 
 /*
  **************		EVENTS		**************

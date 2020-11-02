@@ -13,7 +13,7 @@
 #include "cub3d.h"
 
 
-void import_textures(t_data *data)
+void init_textures(t_data *data)
 {
 	int i = -1;
 	while (++i < 5)
@@ -25,6 +25,8 @@ void import_textures(t_data *data)
 				mlx_get_data_addr(data->textures[i].img,
 								  &data->textures[i].bits_per_pixel, &data->textures[i].line_length,
 								  &data->textures[i].endian);
+		if (data->textures[i].img == NULL || data->textures[i].addr == NULL)
+			prog_error(data, INVALID_TEXTURE);
 	}
 }
 
@@ -79,22 +81,18 @@ char	*next_till_space(char *line)
 	return (line);
 }
 
-
-int			ft_atoi_modified(char **ptr, t_data *data)
+char	*next_non_digit(char *line)
 {
-	int	i;
-	int error;
+	while (*line && is_digit(*line))
+		line++;
+	return (line);
+}
 
-	error = 0;
-	i = 0;
-	while (is_space(**ptr))
-		(*ptr)++;
-	while (is_digit(**ptr))
-		if (i > 1000000000)
-			error = -1;
-		else
-			i = i * 10 + (*(*ptr)++ - 48);
-	return error ? -1 : i;
+char 	*next_till_eol(char *line)
+{
+	while (*line)
+		line++;
+	return (line);
 }
 
 int			ft_atoi_color(char **ptr, t_data *data)
@@ -140,41 +138,48 @@ char	*parse_path(char *begin, const char *end, t_data *data)
 	return (temp);
 }
 
-void	parse_r(char **line, t_mi *mi, t_data *data)
+void	parse_num(char **line, t_mi *mi, t_data *data, int index)
 {
 	*line += sizeof(char) * 1;
-	mi->resolution[0] = ft_atoi_modified(line, data);
-	mi->resolution[1] = ft_atoi_modified(line, data);
-	if (mi->resolution[0] * mi->resolution[1] == 0 || **line)
-		mi->error = 0;
+	*line = next_non_space(*line);
+	if (!is_digit(**line))
+		prog_error(data, INVALID_RESOLUTION);
+	mi->resolution[index] = ft_atoi(*line);
+	*line = next_non_digit(*line);
+	if (**line == '.')
+		*line += sizeof(char) * 1;
+	*line = next_non_digit(*line);
+	*line = next_non_space(*line);
+	if (mi->resolution[index] > (index == 0 ?
+	RESOLUTION_WIDTH_MAX : RESOLUTION_HEIGHT_MAX))
+		mi->resolution[index] = index == 0 ?
+		RESOLUTION_WIDTH_MAX : RESOLUTION_HEIGHT_MAX;
+}
+
+void	parse_r(char **line, t_mi *mi, t_data *data)
+{
+	parse_num(line, mi, data, 0);
+	if (**line != ',')
+		prog_error(data, INVALID_RESOLUTION);
+	parse_num(line, mi, data, 1);
+	if (**line)
+		prog_error(data, INVALID_RESOLUTION);
 }
 
 void	parse_textures(char **line, t_mi *mi, int texture_index, t_data *data)
 {
 	char *temp;
-	char *t;
-	int fd;
 
-	t = NULL;
+	if (mi->textures[texture_index])
+		prog_error(data, DUPLICATE_TEXTURES);
 	*line += sizeof(char) * (texture_index < 4 ? 2 : 1);
 	*line = next_non_space(*line);
 	temp = *line;
-	*line = next_till_space(*line);
-	if (**line != '\0' || *line - temp > 255)
-	{
-		mi->error = 12;
-		return ;
-	}
-	temp = parse_path(temp, *line, data);
-	fd = open(temp, O_RDONLY);
-	if (read(fd, t, 0) < 0)
-	{
-		free(temp);
-		mi->error = 10;
-	}
-	else
-		mi->textures[texture_index] = temp;
-	close(fd);
+	*line = next_till_eol(*line);
+	if (**line != '\0')
+		prog_error(data, INVALID_TEXTURE);
+	mi->textures[texture_index] = parse_path(temp, *line, data);
+	init_textures(data);
 }
 
 int		create_trgb(int t, int r, int g, int b)
@@ -184,16 +189,16 @@ int		create_trgb(int t, int r, int g, int b)
 
 void	parse_color(char **line, t_mi *mi, int color_index, t_data *data)
 {
-	int *ha;
+	int *color_array;
 	int i;
 
 	i = -1;
-	if(!(ha = malloc (sizeof(int) * 3)))
+	if(!(color_array = malloc (sizeof(int) * 3)))
 		sys_error(data);
 	*line += sizeof(char) * 1;
 	while (++i < 3 && *line)
 	{
-		if ((ha[i] = ft_atoi_color(line, data)) >= 0)
+		if ((color_array[i] = ft_atoi_color(line, data)) >= 0)
 		{
 			if (**line == ',' && i < 3)
 				(*line)++;
@@ -204,10 +209,11 @@ void	parse_color(char **line, t_mi *mi, int color_index, t_data *data)
 			*line = NULL;
 	}
 	if (*line)
-		mi->colors[color_index] = create_trgb(0, ha[0], ha[1], ha[2]);
+		mi->colors[color_index] = create_trgb(0, color_array[0],
+			color_array[1], color_array[2]);
 	else
 		mi->error = 0;
-	free(ha);
+	clear_ptr(color_array);
 }
 
 void	parse_flag(char **line, t_mi *mi, t_data *data)
@@ -264,14 +270,11 @@ char	*line_copy(double width, char *src, t_data *data)
 	char *dest;
 	int j;
 
-	j = 0;
+	j = -1;
 	if(!(dest = ft_calloc(sizeof(char), (int)width + 1)))
 		return NULL;
-	while (j < width)
-	{
+	while (++j < width)
 		dest[j] = *src ? *src++ : ' ';
-		j++;
-	}
 	dest[j] = '\0';
 	return (dest);
 }
@@ -385,19 +388,17 @@ int		parse(t_mi *mi, char *filename, t_data *data)
 	int fd;
 	int status;
 	char *temp;
-	char *line;
 
 	fd = open(filename, O_RDONLY);
-	line = NULL;
+	mi->current_line = NULL;
 	status = 1;
-	while (status && mi->error < 0 && (status = get_next_line(fd, &line)) > 0)
+	while (status && (status = get_next_line(fd, mi->current_line)) > 0)
 	{
-		if (*(temp = next_non_space(line)) && *temp != '1')
+		if (*(temp = next_non_space(mi->current_line)) && *temp != '1')
 			parse_flag(&temp, mi, data);
 		else if (*temp == '1')
-			status = parse_map(&line, mi, fd, data);
-		free(line);
-		line = NULL;
+			status = parse_map(mi->current_line, mi, fd, data);
+		clear_ptr(mi->current_line);
 	}
 	close(fd);
 	if (status < 0) // -1 = read error, other = msges
@@ -460,10 +461,8 @@ int parse_config(int argc, char **argv, t_mi *mi, t_data *data)
 		printf("there is an error ... ERROR CODE = %d\n", status);
 	mi->r_speed = ROTATION_SPEED;
 	mi->m_speed = MOVE_SPEED;
-	data->mlx->mlx = mlx_init();
 	if (!(data->textures = malloc (sizeof(t_texture) * 5)) || !data->mlx->mlx)
 		sys_error(data);
-	import_textures(data);
 
 	return (status <= 0 ? -1 : 1);
 }
@@ -480,6 +479,8 @@ int main (int argc, char **argv)
 	data.img = &img;
 	data.mi = &mi;
 	data.ray = &ray;
+	if (!(data.mlx->mlx = mlx_init()))
+		prog_error(&data, SYS_ERROR);
 	parse_config(argc, argv, &mi, &data);
 	init_game(&mi, &mlx, &img, &data);
 	render(-1, &data);
