@@ -21,25 +21,32 @@
 #include <math.h>
 
 
+
 typedef struct		s_sprite
 {
 	double x;
 	double y;
 }					t_sprite;
 
+/*
+ ** resolution[index]: 0 = width; 1 = height;
+ ** textures[index]: 0 = N; 1 = S; 2 = W; 3 = E; 4 = S;
+ ** colors[index]: 0 = F; 1 = C;
+ */
+
 
 typedef struct		s_mi
 {
-	int				*resolution; // width = 0; height = 1;
-	char			**textures; // n = 0, s = 1; w = 2; e = 3; s = 4;
-	int				*colors; // f = 0; c = 1;
+	int				*resolution;
+	char			**textures;
+	int				*colors;
 	t_list			*map_list;
 	double 			lines;
 	double			max_line_length;
 	char			**map;
 	int				error;
 	double			x;
-	double 			y;//x = 0; y = 1
+	double 			y;
 	double 			angle;
 	int				save;
 	int 			numSprites;
@@ -48,6 +55,7 @@ typedef struct		s_mi
 	double 			*spriteDistance;
 	double 			rSpeed;
 	double 			mSpeed;
+	char 			*current_line;
 
 }					t_mi;
 
@@ -130,6 +138,8 @@ typedef struct		s_ray
 	double temp_d;
 	double temp_d2;
 	int temp_i;
+	int temp_i2;
+	int temp_i3;
 }					t_ray;
 
 typedef struct		s_data
@@ -141,11 +151,66 @@ typedef struct		s_data
 	t_ray *ray;
 }					t_data;
 
-
-void	del(void *content)
+void	clear_ptr(void *ptr)
 {
-	free(content);
-	content = NULL;
+	if (ptr)
+	{
+		free(ptr);
+		ptr = NULL;
+	}
+}
+
+void	clear_ptrs(void *ptr1, void *ptr2, void *ptr3, void *ptr4, void *ptr5)
+{
+	clear_ptr(ptr1);
+	clear_ptr(ptr2);
+	clear_ptr(ptr3);
+	clear_ptr(ptr4);
+	clear_ptr(ptr5);
+}
+
+void	clear(t_mi *mi, t_data *data)
+{
+	int i;
+
+	clear_ptrs(mi->resolution, mi->colors, mi->sprites, mi->spriteDistance, mi->spriteOrder);
+	i = -1;
+	while (++i < mi->lines && mi->map[i])
+		clear_ptr(mi->map[i]);
+	i = -1;
+	while (++i < 5)
+		clear_ptrs(mi->textures[i], data->textures[i].img, data->textures[i].addr, NULL, NULL);
+	clear_ptrs(data->img->img, data->img->addr, mi->map_list, mi->textures, data->textures);
+	clear_ptrs(data->mlx->win, data->mlx->mlx, mi->map, mi->current_line, NULL);
+}
+void import_textures(t_data *data)
+{
+	int i = -1;
+	while (++i < 5)
+	{
+		data->textures[i].img =
+				mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[i],
+									  &data->textures[i].width, &data->textures[i].height);
+		data->textures[i].addr =
+				mlx_get_data_addr(data->textures[i].img,
+								  &data->textures[i].bits_per_pixel, &data->textures[i].line_length,
+								  &data->textures[i].endian);
+	}
+}
+
+void	sys_error(t_data *data)
+{
+	clear(data->mi, data);
+	perror("SYSTEM ERROR ENCOUTERED");
+	exit(errno);
+}
+
+void	prog_error(t_data *data, char *message, int error_code)
+{
+	clear(data->mi, data);
+	errno = EINVAL;
+	perror(message);
+	exit(102 + abs(error_code));
 }
 
 int		is_in_set(char c, char const *set)
@@ -156,7 +221,7 @@ int		is_in_set(char c, char const *set)
 	return (0);
 }
 
-void 	set_angle(t_mi *mi, int i, int j)
+void 	set_player_start_pos(t_mi *mi, int i, int j)
 {
 	int direction;
 
@@ -198,7 +263,7 @@ char	*next_till_space(char *line)
 }
 
 
-int			ft_atoi_modified(char **ptr)
+int			ft_atoi_modified(char **ptr, t_data *data)
 {
 	int	i;
 	int error;
@@ -215,7 +280,7 @@ int			ft_atoi_modified(char **ptr)
 	return error ? -1 : i;
 }
 
-int			ft_atoi_color(char **ptr)
+int			ft_atoi_color(char **ptr, t_data *data)
 {
 	int	i;
 	int error;
@@ -224,6 +289,7 @@ int			ft_atoi_color(char **ptr)
 	i = 0;
 	while (is_space(**ptr))
 		(*ptr)++;
+
 	while (is_digit(**ptr))
 		if (i > 255)
 			error = -1;
@@ -242,13 +308,13 @@ int			ft_atoi_color(char **ptr)
 
 
 
-char	*parse_path(char *begin, const char *end)
+char	*parse_path(char *begin, const char *end, t_data *data)
 {
 	char *path;
 	char *temp;
 
 	if (!(path = malloc((end - begin)/sizeof(char) + 1)))
-		return (NULL);
+		sys_error(data);
 	temp = path;
 	while (begin <= end)
 		*path++ = *begin++;
@@ -257,16 +323,16 @@ char	*parse_path(char *begin, const char *end)
 	return (temp);
 }
 
-void	parse_r(char **line, t_mi *mi)
+void	parse_r(char **line, t_mi *mi, t_data *data)
 {
 	*line += sizeof(char) * 1;
-	mi->resolution[0] = ft_atoi_modified(line);
-	mi->resolution[1] = ft_atoi_modified(line);
+	mi->resolution[0] = ft_atoi_modified(line, data);
+	mi->resolution[1] = ft_atoi_modified(line, data);
 	if (mi->resolution[0] * mi->resolution[1] == 0 || **line)
 		mi->error = 0;
 }
 
-void	parse_textures(char **line, t_mi *mi, int texture_index)
+void	parse_textures(char **line, t_mi *mi, int texture_index, t_data *data)
 {
 	char *temp;
 	char *t;
@@ -282,7 +348,7 @@ void	parse_textures(char **line, t_mi *mi, int texture_index)
 		mi->error = 12;
 		return ;
 	}
-	temp = parse_path(temp, *line);
+	temp = parse_path(temp, *line, data);
 	fd = open(temp, O_RDONLY);
 	if (read(fd, t, 0) < 0)
 	{
@@ -299,22 +365,18 @@ int		create_trgb(int t, int r, int g, int b)
 	return(t << 24 | r << 16 | g << 8 | b);
 }
 
-void	parse_color(char **line, t_mi *mi, int color_index)
+void	parse_color(char **line, t_mi *mi, int color_index, t_data *data)
 {
-	int color;
-	int multiplier;
 	int *ha;
 	int i;
 
 	i = -1;
-	ha = malloc (sizeof(int) * 3);
-
+	if(!(ha = malloc (sizeof(int) * 3)))
+		sys_error(data);
 	*line += sizeof(char) * 1;
-	multiplier = 1000000;
-	color = 0;
 	while (++i < 3 && *line)
 	{
-		if ((ha[i] = ft_atoi_color(line)) >= 0)
+		if ((ha[i] = ft_atoi_color(line, data)) >= 0)
 		{
 			if (**line == ',' && i < 3)
 				(*line)++;
@@ -328,105 +390,31 @@ void	parse_color(char **line, t_mi *mi, int color_index)
 		mi->colors[color_index] = create_trgb(0, ha[0], ha[1], ha[2]);
 	else
 		mi->error = 0;
+	free(ha);
 }
 
-void	parse_flag(char **line, t_mi *mi)
+void	parse_flag(char **line, t_mi *mi, t_data *data)
 {
 	if (**line == 'R')
-		parse_r(line, mi);
+		parse_r(line, mi, data);
 	if (**line == 'F')
-		parse_color(line, mi, 0);
+		parse_color(line, mi, 0, data);
 	if (**line == 'C')
-		parse_color(line, mi, 1);
+		parse_color(line, mi, 1, data);
 	if (**line == 'N' && *(*line + sizeof(char) * 1) == 'O')
-		parse_textures(line, mi, 0);
+		parse_textures(line, mi, 0, data);
 	if (**line == 'S' && *(*line + sizeof(char) * 1) == 'O')
-		parse_textures(line, mi, 1);
+		parse_textures(line, mi, 1, data);
 	if (**line == 'W' && *(*line + sizeof(char) * 1) == 'E')
-		parse_textures(line, mi, 2);
+		parse_textures(line, mi, 2, data);
 	if (**line == 'E' && *(*line + sizeof(char) * 1) == 'A')
-		parse_textures(line, mi, 3);
+		parse_textures(line, mi, 3, data);
 	if (**line == 'S' && *(*line + sizeof(char) * 1) != 'O')
-		parse_textures(line, mi, 4);
+		parse_textures(line, mi, 4, data);
 }
 
-//int 	correct_sides_and_spaces(char *line)
-//{
-//	int correct;
-//	char *begin;
-//	char *end;
-//
-//	correct = 1;
-//	while (*line && (is_space(*line) || *line == '1'))
-//		line++;
-//	begin = line;
-//	while (*line)
-//		line++;
-//	line--;
-//	while (line > begin && (is_space(*line) || *line == '1'))
-//		line--;
-//	end = line;
-//	if (*(begin - 1) != '1' && *(end + 1) != '1')
-//		correct = 0;
-////	while (correct && begin < end)
-////	{
-////		if (is_space(*begin))
-////			correct = 0;
-////		begin++;
-////	}
-//	return (correct);
-//}
 
-//int 	get_line_info(char *line, int *directions, int *max_width, int *lines)
-//{
-//	int counter;
-//
-//	if (correct_sides_and_spaces(line))
-//	{
-//		counter = 0;
-//		*lines += 1;
-//		while (*line)
-//		{
-//			counter++;
-//			if (is_in_set(*line, "NSEW"))
-//				*directions += 1;
-//			line++;
-//		}
-//		if (*max_width < counter)
-//			*max_width = counter;
-//		return *directions > 1 ? -1 : 1;
-//
-//	}
-//	return -2;
-//}
-
-//int		parse_map(char **line, t_mi *mi, int fd)
-//{
-//	int directions;
-//	int status = 1;
-//	t_list *temp;
-//
-//	directions = 0;
-//	mi->map_list = NULL;
-//	while (status > 0 && *next_non_space(*line) != '\0')
-//	{
-//		status = get_line_info(*line, &directions, &mi->max_line_length, &mi->lines);
-//		if (!(temp = ft_lstnew(ft_strdup(*line))))
-//			return -1;
-//		ft_lstadd_back(&mi->map_list, temp);
-//		free(*line);
-//		if (status > 0)
-//			status = get_next_line(fd, line);
-//	}
-//	while (*next_non_space(*line) == '\0' && status > 0)
-//		status = get_next_line(fd, line);
-//	if (status < 0 || *next_non_space(*line) != '\0')
-//		mi->error = 0;
-//	return (0);
-//}
-
-
-int		parse_map(char **line, t_mi *mi, int fd)
+int		parse_map(char **line, t_mi *mi, int fd, t_data *data)
 {
 	int status = 1;
 	t_list *temp;
@@ -454,7 +442,7 @@ int		parse_map(char **line, t_mi *mi, int fd)
 }
 
 
-char	*line_copy(double width, char *src)
+char	*line_copy(double width, char *src, t_data *data)
 {
 	char *dest;
 	int j;
@@ -471,17 +459,12 @@ char	*line_copy(double width, char *src)
 	return (dest);
 }
 
-
-
-
-int check_map(t_mi *mi)
+int check_map(t_mi *mi, t_data *data)
 {
 	int i;
 	int j;
 
 	i = -1;
-
-
 	while (++i < mi->lines)
 	{
 		j = -1;
@@ -492,7 +475,7 @@ int check_map(t_mi *mi)
 				if (mi->angle != -100)
 					return (-1);
 				else
-					set_angle(mi, i, j);
+					set_player_start_pos(mi, i, j);
 			}
 			if (is_in_set(mi->map[i][j], "NSWE0") && ((j == 0 ||
 			j == mi->max_line_length - 1 || i == 0 || i == mi->lines - 1) ||
@@ -507,7 +490,7 @@ int check_map(t_mi *mi)
 	return (1);
 }
 
-int	map_list_to_array(t_mi *mi)
+int	map_list_to_array(t_mi *mi, t_data *data)
 {
 	char **map;
 	int i;
@@ -515,21 +498,23 @@ int	map_list_to_array(t_mi *mi)
 
 	map_list = mi->map_list;
 	i = 0;
-	if(mi->lines == 0 || !(map = malloc(sizeof(char *) * (int)mi->lines)))
-		return -1;
+	if(mi->lines == 0)
+		prog_error(data, "No map.", 0);
+	if(!(map = malloc(sizeof(char *) * (int)mi->lines)))
+		sys_error(data);
 	while (i < mi->lines)
 	{
-		if(!(map[i] = line_copy(mi->max_line_length, (char *)map_list->content)))
+		if(!(map[i] = line_copy(mi->max_line_length, (char *)map_list->content, data)))
 			return -1;
 		map_list = map_list->next;
 		i++;
 	}
-	ft_lstclear(&(mi->map_list), del);
+	ft_lstclear(&(mi->map_list), clear_ptr);
 	mi->map = map;
-	return check_map(mi);
+	return check_map(mi, data);
 }
 
-void	parse_sprites_info(t_mi *mi)
+void	parse_sprites_info(t_mi *mi, t_data *data)
 {
 	int i;
 	int j;
@@ -537,9 +522,10 @@ void	parse_sprites_info(t_mi *mi)
 	i = -1;
 	int s;
 	s = 0;
-	mi->spriteDistance = malloc (sizeof(double) * mi->numSprites);
-	mi->spriteOrder = malloc (sizeof(int) * mi->numSprites);
-	mi->sprites = malloc(sizeof(t_sprite) * mi->numSprites);
+	if(!(mi->spriteDistance = malloc (sizeof(double) * mi->numSprites)) ||
+	!(mi->spriteOrder = malloc (sizeof(int) * mi->numSprites)) ||
+	!(mi->sprites = malloc(sizeof(t_sprite) * mi->numSprites)))
+		sys_error(data);
 	while(++i < mi->lines)
 	{
 		j = -1;
@@ -555,7 +541,7 @@ void	parse_sprites_info(t_mi *mi)
 	}
 }
 
-int 	check_map_info(t_mi *mi)
+int 	check_map_info(t_mi *mi, t_data *data)
 {
 	int i;
 
@@ -577,7 +563,7 @@ int 	check_map_info(t_mi *mi)
 	return (1);
 }
 
-int		parse(t_mi *mi, char *filename)
+int		parse(t_mi *mi, char *filename, t_data *data)
 {
 	int fd;
 	int status;
@@ -590,9 +576,9 @@ int		parse(t_mi *mi, char *filename)
 	while (status && mi->error < 0 && (status = get_next_line(fd, &line)) > 0)
 	{
 		if (*(temp = next_non_space(line)) && *temp != '1')
-			parse_flag(&temp, mi);
+			parse_flag(&temp, mi, data);
 		else if (*temp == '1')
-			status = parse_map(&line, mi, fd);
+			status = parse_map(&line, mi, fd, data);
 		free(line);
 		line = NULL;
 	}
@@ -600,13 +586,13 @@ int		parse(t_mi *mi, char *filename)
 	if (status < 0) // -1 = read error, other = msges
 		mi->error = 10;
 	else
-		status = map_list_to_array(mi);
+		status = map_list_to_array(mi, data);
 	if (status >= 0)
-		status = check_map_info(mi);
+		status = check_map_info(mi, data);
 	return status;
 }
 
-void	initialize_mi(t_mi *mi)
+void	initialize_mi(t_mi *mi, t_data *data)
 {
 	int i;
 
@@ -617,9 +603,10 @@ void	initialize_mi(t_mi *mi)
 	mi->map_list = NULL;
 	mi->map = NULL;
 	mi->angle = -100;
-	mi->colors = malloc(sizeof(int) * 2);
-	mi->textures = malloc(sizeof(char *) * 5);
-	mi->resolution = malloc (sizeof(int) * 2);
+	if (!((mi->colors = malloc(sizeof(int) * 2)) &&
+	(mi->textures = malloc(sizeof(char *) * 5)) &&
+	(mi->resolution = malloc (sizeof(int) * 2))))
+		sys_error(data);
 	mi->x = -1;
 	mi->y = -1;
 	while (++i < 5)
@@ -637,99 +624,66 @@ void	initialize_mi(t_mi *mi)
 
 
 
-void print_info(t_mi *mi)
-{
-	int i = 0;
-	int j = 0;
-	while (i < mi->lines)
-	{
-		j = 0;
-		while (j < mi->max_line_length)
-		{
-			printf("%c", i == (int)(mi->y) && j == (int) mi->x ? 'x'
-																		  : mi->map[i][j]);
-			j++;
-		}
-		printf("\n");
-		i++;
-	}
-	printf("\n\n\n\nwidth = %d\t height = %d\n"
-		   "no texture = %s\n"
-		   "so texture = %s\n"
-		   "we texture = %s\n"
-		   "ea texture = %s\n"
-		   "s texture = %s\n"
-		   "f color = %d \n"
-		   "c color = %d \n"
-		   "save = %d\n"
-	 "ppos[0] = %lf\t ppos[1] = %lf\n"
-  "angle = %lf\n", mi->resolution[0], mi->resolution[1],
-		   mi->textures[0], mi->textures[1], mi->textures[2], mi->textures[3],
-		   mi->textures[4], mi->colors[0], mi->colors[1], mi->save, mi->x, mi->y, mi->angle);
+//void print_info(t_mi *mi)
+//{
+//	int i = 0;
+//	int j = 0;
+//	while (i < mi->lines)
+//	{
+//		j = 0;
+//		while (j < mi->max_line_length)
+//		{
+//			printf("%c", i == (int)(mi->y) && j == (int) mi->x ? 'x'
+//																		  : mi->map[i][j]);
+//			j++;
+//		}
+//		printf("\n");
+//		i++;
+//	}
+//	printf("\n\n\n\nwidth = %d\t height = %d\n"
+//		   "no texture = %s\n"
+//		   "so texture = %s\n"
+//		   "we texture = %s\n"
+//		   "ea texture = %s\n"
+//		   "s texture = %s\n"
+//		   "f color = %d \n"
+//		   "c color = %d \n"
+//		   "save = %d\n"
+//	 "ppos[0] = %lf\t ppos[1] = %lf\n"
+//  "angle = %lf\n", mi->resolution[0], mi->resolution[1],
+//		   mi->textures[0], mi->textures[1], mi->textures[2], mi->textures[3],
+//		   mi->textures[4], mi->colors[0], mi->colors[1], mi->save, mi->x, mi->y, mi->angle);
+//
+//}
 
-}
 
-void	print_map(t_data *data)
-{
-	int i = 0;
-	int j = 0;
-	while (i < data->mi->lines)
-	{
-		j = 0;
-		while (j < data->mi->max_line_length)
-		{
-			printf("%c", i == data->ray->posY && j == data->ray->posX ? 'x'
-																		  : data->mi->map[i][j]);
-			j++;
-		}
-		printf("\n");
-		i++;
-	}
-	printf("ppos[0] = %lf\t ppos[1] = %lf\n", data->ray->posY, data->ray->posX);
-}
-
-void 	clear_mi(t_mi *mi)
-{
-	int i;
-
-	i = -1;
-	while (++i < mi->lines)
-	{
-		if (mi->map[i])
-			free(mi->map[i]);
-		if (i < 5 && mi->textures[i])
-			free(mi->textures[i]);
-	}
-	if (mi->resolution)
-		free(mi->resolution);
-	if(mi->colors)
-		free(mi->colors);
-	if (mi->map)
-		free(mi->map);
-	if (mi->textures)
-		free(mi->textures);
-}
-
-int import_config(int argc, char **argv, t_mi *mi)
+int import_config(int argc, char **argv, t_mi *mi, t_data *data)
 {
 	int status;
 
 	//if ((argc == 2 || argc == 3) && correct_cub(argv[2]))
 	if (argc == 2 || argc == 3)
 	{
-		initialize_mi(mi);
-		status = parse(mi, argv[1]);
-		if (argc == 3 && ft_strncmp("--shared", argv[2], 10))
+		initialize_mi(mi, data);
+		status = parse(mi, argv[1], data);
+		if (argc == 3 && ft_strncmp("--save", argv[2], 10))
 			mi->save = 1;
 		if (status != -1 && mi->numSprites)
 		{
-			parse_sprites_info(mi);
+			parse_sprites_info(mi, data);
 		}
 	}
 	else
 		status = -1;
 	if (status == -1 || mi->error >= 0)
 		printf("there is an error ... ERROR CODE = %d\n", status);
+	mi->rSpeed = ROTATION_SPEED;
+	mi->mSpeed = MOVE_SPEED;
+	data->mlx->mlx = mlx_init();
+	if (!(data->textures = malloc (sizeof(t_texture) * 5)) || !data->mlx->mlx)
+		sys_error(data);
+	import_textures(data);
+
 	return (status <= 0 ? -1 : 1);
 }
 
@@ -753,44 +707,48 @@ void	handle_move(int key, t_mi *mi, t_ray *ray)
 
 }
 
-void	handle_rotate(int key, t_mi *mi, t_ray *ray)
+void	handle_rotate(t_ray *ray, double rotation)
 {
-	ray->temp_d2 = key == 123 ? mi->rSpeed : -mi->rSpeed;
+	ray->temp_d = ray->dirX;
+	ray->dirX = ray->dirX * cos(rotation) - ray->dirY * sin(rotation);
+	ray->dirY = ray->temp_d * sin(rotation) + ray->dirY * cos(rotation);
+	ray->temp_d = ray->planeX;
+	ray->planeX = ray->planeX * cos(rotation) - ray->planeY * sin (rotation);
+	ray->planeY = ray->temp_d * sin (rotation) + ray->planeY * cos (rotation);
+}
+
+
+
+int handle_exit(t_data *data)
+{
+	clear(data->mi, data);
+	write(1, EXIT_MESSAGE, ft_strlen(EXIT_MESSAGE));
+	exit(0);
+}
+
+
+
+
+void key_pressed(int key, t_mi *mi, t_ray *ray, t_data *data)
+{
+	if (key == 0 || key == 1 || key == 2 || key == 13)
+		handle_move(key, mi, ray);
 	if (key == 123 || key == 124)
-	{
-		ray->temp_d = ray->dirX;
-		ray->dirX = ray->dirX * cos(ray->temp_d2) - ray->dirY * sin(ray->temp_d2);
-		ray->dirY = ray->temp_d * sin(ray->temp_d2) + ray->dirY * cos(ray->temp_d2);
-		ray->temp_d = ray->planeX;
-		ray->planeX = ray->planeX * cos(ray->temp_d2) - ray->planeY * sin (ray->temp_d2);
-		ray->planeY = ray->temp_d * sin (ray->temp_d2) + ray->planeY * cos (ray->temp_d2);
-	}
-}
-
-void handle_exit()
-{
-
-}
-
-
-void key_pressed(int key, t_mi *mi, t_ray *ray)
-{
-	handle_move(key, mi, ray);
-	handle_rotate(key, mi, ray);
-
+		handle_rotate(ray, key == 123 ? mi->rSpeed : -mi->rSpeed);
+	if (key == 53)
+		handle_exit(data);
 }
 
 int 			get_img_tex_color(t_texture *texture, int x, int y)
 {
-	return (*(unsigned int*)(texture->addr + (y * texture->line_length + x * (texture->bits_per_pixel / 8))));
+	return (*(unsigned int*)(texture->addr +
+	(y * texture->line_length + x * (texture->bits_per_pixel / 8))));
 }
 
 void            my_mlx_pixel_put(t_img *img, int x, int y, unsigned int color)
 {
-	char *dst;
-
-	dst = img->addr + (y * img->line_length + x * (img->bits_per_pixel / 8));
-	*(unsigned int *) dst = color;
+	*(unsigned int *)
+	(img->addr + (y * img->line_length + x * (img->bits_per_pixel / 8))) = color;
 }
 
 
@@ -807,33 +765,28 @@ void	drawRay(t_mi *mi, t_ray *ray, t_data *data)
 			ray->texPos += ray->step;
 			my_mlx_pixel_put(data->img, ray->x, ray->y, get_img_tex_color(&data->textures[ray->texNum], ray->texX, ray->texY));
 		}
-		if (ray->y > ray->drawEnd)
+		if (ray->y >= ray->drawEnd)
 			my_mlx_pixel_put(data->img, ray->x, ray->y, mi->colors[1]);
 	}
 }
 
 
-void	sort_sprites(t_mi *mi)
+void	sort_sprites(t_mi *mi, t_ray *ray)
 {
-	int i;
-	int j;
-	int temp1;
-	double temp2;
-
-	i = -1;
-	while (++i < mi->numSprites)
+	ray->temp_i = -1;
+	while (++ray->temp_i < mi->numSprites)
 	{
-		j = -1;
-		while (++j < mi->numSprites - 1)
+		ray->temp_i2 = -1;
+		while (++ray->temp_i2 < mi->numSprites - 1)
 		{
-			if (mi->spriteDistance[j] < mi->spriteDistance[j + 1])
+			if (mi->spriteDistance[ray->temp_i2] < mi->spriteDistance[ray->temp_i2 + 1])
 			{
-				temp1 = mi->spriteOrder[j];
-				mi->spriteOrder[j] = mi->spriteOrder[j + 1];
-				mi->spriteOrder[j + 1] = temp1;
-				temp2 = mi->spriteDistance[j];
-				mi->spriteDistance[j] = mi->spriteDistance[j + 1];
-				mi->spriteDistance[j + 1] = temp2;
+				ray->temp_i3 = mi->spriteOrder[ray->temp_i2];
+				mi->spriteOrder[ray->temp_i2] = mi->spriteOrder[ray->temp_i2 + 1];
+				mi->spriteOrder[ray->temp_i2 + 1] = ray->temp_i3;
+				ray->temp_d = mi->spriteDistance[ray->temp_i2];
+				mi->spriteDistance[ray->temp_i2] = mi->spriteDistance[ray->temp_i2 + 1];
+				mi->spriteDistance[ray->temp_i2 + 1] = ray->temp_d;
 			}
 		}
 	}
@@ -923,13 +876,13 @@ void	spritesStartConditions(t_mi *mi, t_ray *ray, t_data *data)
 									  (ray->posY - mi->sprites[ray->i].y) * (ray->posY - mi->sprites[ray->i].y));
 	}
 	ray->i = -1;
-	sort_sprites(mi);
+	sort_sprites(mi, ray);
 	ray->texNum = 4;
 	ray->texWidth = data->textures[ray->texNum].width;
 	ray->texHeight = data->textures[ray->texNum].height;
 }
 
-void	calcSprites(t_mi *mi, t_ray *ray, t_data *data)
+void	calcSprites(t_mi *mi, t_ray *ray)
 {
 	ray->spriteX =  mi->sprites[mi->spriteOrder[ray->i]].x - ray->posX + 0.5;
 	ray->spriteY =  mi->sprites[mi->spriteOrder[ray->i]].y - ray->posY + 0.5;
@@ -970,14 +923,13 @@ void	putSprites(t_mi *mi, t_ray *ray, t_data *data)
 			ray->y = ray->drawStartY - 1;
 			while (++ray->y < ray->drawEndY)
 			{
-				ray->temp_i =
+				ray->temp_i2 =
 				ray->y * 256 - mi->resolution[1] * 128 + ray->spriteHeight * 128;
-				ray->texY = ((ray->temp_i * ray->texHeight) / ray->spriteHeight)/256;
-				//drawSprites(data, i);
-				ray->temp_i = get_img_tex_color(&data->textures[ray->texNum],
+				ray->texY = ((ray->temp_i2 * ray->texHeight) / ray->spriteHeight)/256;
+				ray->temp_i2 = get_img_tex_color(&data->textures[ray->texNum],
 						ray->texX, ray->texY);
-				if ((ray->temp_i & 0x00FFFFFFF) != 0)
-					my_mlx_pixel_put(data->img, ray->stripe, ray->y, ray->temp_i);
+				if ((ray->temp_i2 & 0x00FFFFFFF) != 0)
+					my_mlx_pixel_put(data->img, ray->stripe, ray->y, ray->temp_i2);
 			}
 		}
 	}
@@ -988,119 +940,62 @@ void	drawSprites(t_mi *mi, t_ray *ray, t_data *data)
 	spritesStartConditions(mi, ray, data);
 	while (++ray->i < mi->numSprites)
 	{
-		calcSprites(mi, ray, data);
+		calcSprites(mi, ray);
 		putSprites(mi, ray, data);
 	}
-}
-
-void	raycasting(t_mi *mi, t_ray *ray, t_data *data)
-{
-	drawWalls(mi,ray,data);
-	drawSprites(mi, ray, data);
-	mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->img->img, 0, 0);
 }
 
 
 int render(int key, t_data *data)
 {
-	key_pressed(key, data->mi, data->ray);
-	raycasting(data->mi, data->ray, data);
+	key_pressed(key, data->mi, data->ray, data);
+	drawWalls(data->mi,data->ray,data);
+	drawSprites(data->mi, data->ray, data);
+	mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->img->img, 0, 0);
 }
 
-void	import_texture(t_data *data, int texNum)
+void	init_game(t_mi *mi, t_ray *ray, t_mlx *mlx, t_img *img, t_data *data)
 {
-	data->textures[texNum].img =
-	mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[texNum],
-	&data->textures[texNum].width, &data->textures[texNum].height);
-	data->textures[texNum].addr =
-	mlx_get_data_addr(data->textures[texNum].img,
-	&data->textures[texNum].bits_per_pixel, &data->textures[texNum].line_length,
-	&data->textures[texNum].endian);
-
-}
-
-
-void import_textures(t_data *data)
-{
-	int i = -1;
-	while (++i < 5)
-	{
-		import_texture(data, i);
-	}
-}
-
-
-void	adjust_vectors(t_data *data)
-{
-	double diff_angle;
-
-	diff_angle = data->mi->angle - M_PI_2;
-	double oldDirX = data->ray->dirX;
-	data->ray->dirX = data->ray->dirX * cos(diff_angle) - data->ray->dirY * sin (diff_angle);
-	data->ray->dirY = oldDirX * sin(diff_angle) + data->ray->dirY * cos(diff_angle);
-	double oldPlaneX = data->ray->planeX;
-	data->ray->planeX = data->ray->planeX * cos(diff_angle) - data->ray->planeY * sin (diff_angle);
-	data->ray->planeY = oldPlaneX * sin (diff_angle) + data->ray->planeY * cos (diff_angle);
+	mlx->win = mlx_new_window(mlx->mlx, mi->resolution[0], mi->resolution[1], "cub3D");
+	if (!mlx->win)
+		sys_error(data);
+	img->img = mlx_new_image(mlx->mlx, mi->resolution[0], mi->resolution[1]);
+	if (!img->img)
+		sys_error(data);
+	img->addr = mlx_get_data_addr(img->img, &img->bits_per_pixel, &img->line_length, &img->endian);
+	ray->posX = data->mi->x;
+	ray->posY = data->mi->y;
+	ray->planeX = PLANE_X;
+	ray->planeY = PLANE_Y;
+	ray->dirX = -1;
+	ray->dirY = 0;
+	if (mi->angle != M_PI_2)
+		handle_rotate(ray, mi->angle - M_PI_2);
+	if(!(ray->ZBuffer = malloc (mi->resolution[0] * sizeof(double))))
+		sys_error(data);
 }
 
 
 int main (int argc, char **argv)
 {
-//	char *spaces = "\a\b\t\n\v\f\r ";
-//	char *spacenum = "\a\b\t\n\v\f\r 0123456789";
-//	char **identifier = {
-//							"R",
-//							"NO",
-//							"SO",
-//							"WE",
-//							"EA",
-//							"S",
-//							"F",
-//							"C",
-//							"1"
-//						};
-//	char **error_msg = 	{
-//							"0. INVALID MAP CONFIG. CHECK IDENTIFIERS USAGE.",
-//							"9. INVALID MAP",
-//							"10. SYSTEM ERROR (I.E. MEMORY ALLOCATION, OVERFLOW).",
-//							"11. CHECK FOR SPACES AFTER PATH INFO. UNDEFINED BEHAVIOR.",
-//							"12. filename length > 255",
-//						};
 	t_mi mi;
 	t_img img;
 	t_mlx mlx;
 	t_data data;
 	t_ray ray;
-	t_texture *textures;
-	textures = malloc (sizeof(t_texture) * 5);
-	if (import_config(argc, argv, &mi) >= 0)
+
+	data.mlx = &mlx;
+	data.img = &img;
+	data.mi = &mi;
+	data.ray = &ray;
+	import_config(argc, argv, &mi, &data);
+	init_game(&mi, &ray, &mlx, &img, &data);
+	render(-1, &data);
+	if (!mi.save)
 	{
-		mlx.mlx = mlx_init();
-		mlx.win = mlx_new_window(mlx.mlx, mi.resolution[0], mi.resolution[1], "cub3D");
-		img.img = mlx_new_image(mlx.mlx, mi.resolution[0], mi.resolution[1]);
-		img.addr = mlx_get_data_addr(img.img, &img.bits_per_pixel, &img.line_length, &img.endian);
-		data.mlx = &mlx;
-		data.img = &img;
-		data.mi = &mi;
-		data.ray = &ray;
-		ray.posX = data.mi->x;
-		ray.posY = data.mi->y;
-		ray.planeX = 0.0;
-		ray.planeY = 0.66;
-		ray.dirX = -1;
-		ray.dirY = 0;
-		mi.rSpeed = 0.5;
-		mi.mSpeed = 0.5;
-		ray.ZBuffer = malloc (mi.resolution[0] * sizeof(double));
-		if (mi.angle != M_PI_2)
-			adjust_vectors(&data);
-		data.textures = textures;
-		import_textures(&data);
-		render(-1, &data);
-		mlx_hook(mlx.win, 2, 0, render, &data);
+		mlx_hook(mlx.win, KEY_PRESS_EVENT, KEY_PRESS_MASK, render, &data);
+		mlx_hook(mlx.win, DESTROY_NOTIFY, DESTROY_NOTIFY_MASK, handle_exit, &data);
 		mlx_loop(mlx.mlx);
 	}
-	else
-		clear_mi(&mi);
 	return (0);
 }

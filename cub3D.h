@@ -22,6 +22,13 @@
 # include <stdlib.h>
 # include "libft/libft.h"
 # include "get_next_line/get_next_line.h"
-
-
+# define ROTATION_SPEED 0.25
+# define MOVE_SPEED 0.5
+# define PLANE_X 0.0
+# define PLANE_Y 0.66
+# define KEY_PRESS_EVENT 2
+# define KEY_PRESS_MASK 0
+# define DESTROY_NOTIFY 17
+# define DESTROY_NOTIFY_MASK 17
+# define EXIT_MESSAGE "\nExit. Thanks for playing.\n"
 #endif

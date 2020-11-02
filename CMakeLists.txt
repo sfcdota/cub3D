@@ -9,7 +9,7 @@ set(CMAKE_C_FLAGS "-D BUFFER_SIZE=128 -L../libft/ -lft  -L/usr/local/lib -lmlx -
 file(GLOB srcs "*.c")
 #add_executable(cub3D ${srcs} cub3D.h)
 file(GLOB gnl "./get_next_line/*.c")
-add_executable(cub3D ${srcs} ${gnl} cub3D.h)
+add_executable(cub3D ${srcs} ${gnl} cub3D.h raycasting/raycasting_main.c)
 include_directories(libft/)
 include_directories(get_next_line/)
 include_directories(/usr/local/include)
