@@ -6,44 +6,13 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/10/12 15:55:36 by cbach             #+#    #+#             */
-/*   Updated: 2020/10/30 17:59:22 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/02 04:43:18 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "cub3D.h"
 
-void	clear_ptr(void *ptr)
-{
-	if (ptr)
-	{
-		free(ptr);
-		ptr = NULL;
-	}
-}
 
-void	clear_ptrs(void *ptr1, void *ptr2, void *ptr3, void *ptr4, void *ptr5)
-{
-	clear_ptr(ptr1);
-	clear_ptr(ptr2);
-	clear_ptr(ptr3);
-	clear_ptr(ptr4);
-	clear_ptr(ptr5);
-}
-
-void	clear(t_mi *mi, t_data *data)
-{
-	int i;
-
-	clear_ptrs(mi->resolution, mi->colors, mi->sprites, mi->spriteDistance, mi->spriteOrder);
-	i = -1;
-	while (++i < mi->lines && mi->map[i])
-		clear_ptr(mi->map[i]);
-	i = -1;
-	while (++i < 5)
-		clear_ptrs(mi->textures[i], data->textures[i].img, data->textures[i].addr, NULL, NULL);
-	clear_ptrs(data->img->img, data->img->addr, mi->map_list, mi->textures, data->textures);
-	clear_ptrs(data->mlx->win, data->mlx->mlx, mi->map, mi->current_line, NULL);
-}
 void import_textures(t_data *data)
 {
 	int i = -1;
@@ -59,20 +28,7 @@ void import_textures(t_data *data)
 	}
 }
 
-void	sys_error(t_data *data)
-{
-	clear(data->mi, data);
-	perror("SYSTEM ERROR ENCOUTERED");
-	exit(errno);
-}
 
-void	prog_error(t_data *data, char *message, int error_code)
-{
-	clear(data->mi, data);
-	errno = EINVAL;
-	perror(message);
-	exit(102 + abs(error_code));
-}
 
 int		is_in_set(char c, char const *set)
 {
@@ -483,41 +439,6 @@ void	initialize_mi(t_mi *mi, t_data *data)
 	mi->save = 0;
 }
 
-
-
-//void print_info(t_mi *mi)
-//{
-//	int i = 0;
-//	int j = 0;
-//	while (i < mi->lines)
-//	{
-//		j = 0;
-//		while (j < mi->max_line_length)
-//		{
-//			printf("%c", i == (int)(mi->y) && j == (int) mi->x ? 'x'
-//																		  : mi->map[i][j]);
-//			j++;
-//		}
-//		printf("\n");
-//		i++;
-//	}
-//	printf("\n\n\n\nwidth = %d\t height = %d\n"
-//		   "no texture = %s\n"
-//		   "so texture = %s\n"
-//		   "we texture = %s\n"
-//		   "ea texture = %s\n"
-//		   "s texture = %s\n"
-//		   "f color = %d \n"
-//		   "c color = %d \n"
-//		   "save = %d\n"
-//	 "ppos[0] = %lf\t ppos[1] = %lf\n"
-//  "angle = %lf\n", mi->resolution[0], mi->resolution[1],
-//		   mi->textures[0], mi->textures[1], mi->textures[2], mi->textures[3],
-//		   mi->textures[4], mi->colors[0], mi->colors[1], mi->save, mi->x, mi->y, mi->angle);
-//
-//}
-
-
 int import_config(int argc, char **argv, t_mi *mi, t_data *data)
 {
 	int status;
@@ -547,82 +468,6 @@ int import_config(int argc, char **argv, t_mi *mi, t_data *data)
 	return (status <= 0 ? -1 : 1);
 }
 
-void	handle_move(int key, t_mi *mi, t_ray *ray)
-{
-	ray->temp_d = key == 13 || key == 0 ? mi->mSpeed : -mi->mSpeed;
-	if (key == 13 || key == 1)
-	{
-		if (mi->map[(int)(ray->posX + 1.5 * ray->dirX * ray->temp_d)][(int)ray->posY] == '0')
-			ray->posX += ray->dirX * ray->temp_d;
-		if (mi->map[(int)(ray->posX)][(int)(ray->posY +  1.5 * ray->dirY * ray->temp_d)] == '0')
-			ray->posY += ray->dirY * ray->temp_d;
-	}
-	if (key == 0 || key == 2)
-	{
-		if (mi->map[(int)(ray->posX - 1.5 * ray->dirY * ray->temp_d)][(int)ray->posY] == '0')
-			ray->posX -= ray->dirY * ray->temp_d;
-		if (mi->map[(int)(ray->posX)][(int)(ray->posY +  1.5 * ray->dirX * ray->temp_d)] == '0')
-			ray->posY += ray->dirX * ray->temp_d;
-	}
-
-}
-
-void	handle_rotate(t_ray *ray, double rotation)
-{
-	ray->temp_d = ray->dirX;
-	ray->dirX = ray->dirX * cos(rotation) - ray->dirY * sin(rotation);
-	ray->dirY = ray->temp_d * sin(rotation) + ray->dirY * cos(rotation);
-	ray->temp_d = ray->planeX;
-	ray->planeX = ray->planeX * cos(rotation) - ray->planeY * sin (rotation);
-	ray->planeY = ray->temp_d * sin (rotation) + ray->planeY * cos (rotation);
-}
-
-
-
-int handle_exit(t_data *data)
-{
-	clear(data->mi, data);
-	ft_putstr_fd(EXIT_MESSAGE, 1);
-	exit(0);
-}
-
-
-
-
-void key_pressed(int key, t_mi *mi, t_ray *ray, t_data *data)
-{
-	if (key == 0 || key == 1 || key == 2 || key == 13)
-		handle_move(key, mi, ray);
-	if (key == 123 || key == 124)
-		handle_rotate(ray, key == 123 ? mi->rSpeed : -mi->rSpeed);
-	if (key == 53)
-		handle_exit(data);
-}
-
-
-void	init_game(t_mi *mi, t_ray *ray, t_mlx *mlx, t_img *img, t_data *data)
-{
-	mlx->win = mlx_new_window(mlx->mlx, mi->resolution[0], mi->resolution[1], "cub3D");
-	if (!mlx->win)
-		sys_error(data);
-	img->img = mlx_new_image(mlx->mlx, mi->resolution[0], mi->resolution[1]);
-	if (!img->img)
-		sys_error(data);
-	img->addr = mlx_get_data_addr(img->img, &img->bits_per_pixel, &img->line_length, &img->endian);
-	ray->posX = data->mi->x;
-	ray->posY = data->mi->y;
-	ray->planeX = PLANE_X;
-	ray->planeY = PLANE_Y;
-	ray->dirX = -1;
-	ray->dirY = 0;
-	if (mi->angle != M_PI_2)
-		handle_rotate(ray, mi->angle - M_PI_2);
-	if(!(ray->ZBuffer = malloc (mi->resolution[0] * sizeof(double))))
-		sys_error(data);
-}
-
-
-
 int main (int argc, char **argv)
 {
 	t_mi mi;
@@ -636,7 +481,7 @@ int main (int argc, char **argv)
 	data.mi = &mi;
 	data.ray = &ray;
 	import_config(argc, argv, &mi, &data);
-	init_game(&mi, &ray, &mlx, &img, &data);
+	init_game(&mi, &mlx, &img, &data);
 	render(-1, &data);
 	if (!mi.save)
 	{

@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/05/17 02:06:30 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 04:01:54 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/02 04:49:02 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -168,6 +168,14 @@ typedef struct	s_data
 	t_ray		*ray;
 }				t_data;
 
+/*
+ **************		ERRORS		**************
+*/
+void	clear_ptr(void *ptr);
+void	clear_ptrs(void *ptr1, void *ptr2, void *ptr3, void *ptr4);
+void	clear(t_mi *mi, t_data *data);
+void	sys_error(t_data *data);
+void	prog_error(t_data *data, char *message, int error_code);
 
 /*
  **************		EVENTS		**************
@@ -194,7 +202,7 @@ void			calc_sprites(t_mi *mi, t_ray *ray);
 void			put_sprites(t_mi *mi, t_ray *ray, t_data *data);
 void			draw_sprites(t_mi *mi, t_ray *ray, t_data *data);
 int				render(int key, t_data *data);
-void			init_game(t_mi *mi, t_ray *ray, t_mlx *mlx, t_img *img, t_data *data);
+void			init_game(t_mi *mi, t_mlx *mlx, t_img *img, t_data *data);
 
 
 #endif
