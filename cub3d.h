@@ -12,12 +12,6 @@
 
 #ifndef CUB3D_H
 # define CUB3D_H
-# ifndef FD_MAX_COUNT
-#  define FD_MAX_COUNT 1024
-# endif
-# ifndef BUFFER_SIZE
-#  define BUFFER_SIZE 128
-# endif
 # include <stdlib.h>
 # include <mlx.h>
 # include <math.h>
@@ -40,7 +34,6 @@
  **************		STRUCTS		**************
 */
 
-
 typedef struct	s_sprite
 {
 	double		x;
@@ -48,31 +41,32 @@ typedef struct	s_sprite
 }				t_sprite;
 
 /*
- ** resolution[index]: 0 = width; 1 = height;
- ** textures[index]: 0 = N; 1 = S; 2 = W; 3 = E; 4 = S;
- ** colors[index]: 0 = F; 1 = C;
- */
+** resolution[index]: 0 = width; 1 = height;
+** textures[index]: 0 = N; 1 = S; 2 = W; 3 = E; 4 = S;
+** colors[index]: 0 = F; 1 = C;
+*/
+
 typedef struct	s_mi
 {
 	int			*resolution;
 	char		**textures;
 	int			*colors;
 	t_list		*map_list;
-	double 		lines;
+	double		lines;
 	double		max_line_length;
 	char		**map;
 	int			error;
 	double		x;
-	double 		y;
-	double 		angle;
+	double		y;
+	double		angle;
 	int			save;
-	int 		numSprites;
+	int			sprites_count;
 	t_sprite	*sprites;
-	int 		*spriteOrder;
-	double 		*spriteDistance;
-	double 		rSpeed;
-	double 		mSpeed;
-	char 		*current_line;
+	int			*sprites_order;
+	double		*sprites_distance;
+	double		r_speed;
+	double		m_speed;
+	char		*current_line;
 
 }				t_mi;
 
@@ -104,53 +98,53 @@ typedef struct	s_texture
 
 typedef struct	s_ray
 {
-	double		posX;
-	double		posY;
-	double		dirX;
-	double		dirY;
-	double		planeX;
-	double		planeY;
-	double		cameraX;
-	double		rayDirX;
-	double		rayDirY;
-	double		sideDistX;
-	double		sideDistY;
-	int			mapX;
-	int			mapY;
-	double		deltaDistX;
-	double		deltaDistY;
-	double		perpWallDist;
-	int			stepX;
-	int			stepY;
+	double		pos_x;
+	double		pos_y;
+	double		dir_x;
+	double		dir_y;
+	double		plane_x;
+	double		plane_y;
+	double		camera_x;
+	double		ray_dir_x;
+	double		ray_dir_y;
+	double		side_dist_x;
+	double		side_dist_y;
+	int			map_x;
+	int			map_y;
+	double		delta_dist_x;
+	double		delta_dist_y;
+	double		perp_dist;
+	int			step_x;
+	int			step_y;
 	int			hit;
 	int			side;
-	int			lineHeight;
-	int			drawStart;
-	int			drawEnd;
-	double		wallX;
-	int			texNum;
-	int			texWidth;
-	int			texHeight;
-	int			texX;
-	int			texY;
+	int			line_height;
+	int			draw_start;
+	int			draw_end;
+	double		wall_x;
+	int			tex_num;
+	int			tex_width;
+	int			tex_height;
+	int			tex_x;
+	int			tex_y;
 	double		step;
-	double		texPos;
+	double		tex_pos;
 	int			x;
 	int			y;
-	double		spriteX;
-	double		spriteY;
-	double		invDet;
-	double		transformX;
-	double		transformY;
-	int			spriteScreenX;
-	int			spriteHeight;
-	int			spriteWidth;
-	int			drawStartY;
-	int			drawEndY;
-	int			drawStartX;
-	int			drawEndX;
+	double		sprite_x;
+	double		sprite_y;
+	double		inv_det;
+	double		transform_x;
+	double		transform_y;
+	int			sprite_screen_x;
+	int			sprite_height;
+	int			sprite_width;
+	int			draw_start_y;
+	int			draw_end_y;
+	int			draw_start_x;
+	int			draw_end_x;
 	int			stripe;
-	double		*ZBuffer;
+	double		*z_buffer;
 	int			i;
 	double		temp_d;
 	double		temp_d2;
@@ -171,11 +165,11 @@ typedef struct	s_data
 /*
  **************		ERRORS		**************
 */
-void	clear_ptr(void *ptr);
-void	clear_ptrs(void *ptr1, void *ptr2, void *ptr3, void *ptr4);
-void	clear(t_mi *mi, t_data *data);
-void	sys_error(t_data *data);
-void	prog_error(t_data *data, char *message, int error_code);
+void			clear_ptr(void *ptr);
+void			clear_ptrs(void *ptr1, void *ptr2, void *ptr3, void *ptr4);
+void			clear(t_mi *mi, t_data *data);
+void			sys_error(t_data *data);
+void			prog_error(t_data *data, char *message, int error_code);
 
 /*
  **************		EVENTS		**************
@@ -203,6 +197,5 @@ void			put_sprites(t_mi *mi, t_ray *ray, t_data *data);
 void			draw_sprites(t_mi *mi, t_ray *ray, t_data *data);
 int				render(int key, t_data *data);
 void			init_game(t_mi *mi, t_mlx *mlx, t_img *img, t_data *data);
-
 
 #endif

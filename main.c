@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "cub3D.h"
+#include "cub3d.h"
 
 
 void import_textures(t_data *data)
@@ -300,7 +300,7 @@ int check_map(t_mi *mi, t_data *data)
 			mi->map[i][j - 1] == ' ' || mi->map[i][j + 1] == ' ')))
 					return (-1);
 			if (mi->map[i][j] == '2')
-				mi->numSprites++;
+				mi->sprites_count++;
 		}
 	}
 	mi->map[(int)(mi->x)][(int)mi->y] = '0';
@@ -339,9 +339,9 @@ void	parse_sprites_info(t_mi *mi, t_data *data)
 	i = -1;
 	int s;
 	s = 0;
-	if(!(mi->spriteDistance = malloc (sizeof(double) * mi->numSprites)) ||
-	!(mi->spriteOrder = malloc (sizeof(int) * mi->numSprites)) ||
-	!(mi->sprites = malloc(sizeof(t_sprite) * mi->numSprites)))
+	if(!(mi->sprites_distance = malloc (sizeof(double) * mi->sprites_count)) ||
+	!(mi->sprites_order = malloc (sizeof(int) * mi->sprites_count)) ||
+	!(mi->sprites = malloc(sizeof(t_sprite) * mi->sprites_count)))
 		sys_error(data);
 	while(++i < mi->lines)
 	{
@@ -414,7 +414,7 @@ void	initialize_mi(t_mi *mi, t_data *data)
 	int i;
 
 	i = -1;
-	mi->numSprites = 0;
+	mi->sprites_count = 0;
 	mi->max_line_length = 0;
 	mi->lines = 0;
 	mi->map_list = NULL;
@@ -439,7 +439,7 @@ void	initialize_mi(t_mi *mi, t_data *data)
 	mi->save = 0;
 }
 
-int import_config(int argc, char **argv, t_mi *mi, t_data *data)
+int parse_config(int argc, char **argv, t_mi *mi, t_data *data)
 {
 	int status;
 
@@ -449,7 +449,7 @@ int import_config(int argc, char **argv, t_mi *mi, t_data *data)
 		status = parse(mi, argv[1], data);
 		if (argc == 3 && ft_strncmp("--save", argv[2], 10))
 			mi->save = 1;
-		if (status != -1 && mi->numSprites)
+		if (status != -1 && mi->sprites_count)
 		{
 			parse_sprites_info(mi, data);
 		}
@@ -458,8 +458,8 @@ int import_config(int argc, char **argv, t_mi *mi, t_data *data)
 		status = -1;
 	if (status == -1 || mi->error >= 0)
 		printf("there is an error ... ERROR CODE = %d\n", status);
-	mi->rSpeed = ROTATION_SPEED;
-	mi->mSpeed = MOVE_SPEED;
+	mi->r_speed = ROTATION_SPEED;
+	mi->m_speed = MOVE_SPEED;
 	data->mlx->mlx = mlx_init();
 	if (!(data->textures = malloc (sizeof(t_texture) * 5)) || !data->mlx->mlx)
 		sys_error(data);
@@ -480,7 +480,7 @@ int main (int argc, char **argv)
 	data.img = &img;
 	data.mi = &mi;
 	data.ray = &ray;
-	import_config(argc, argv, &mi, &data);
+	parse_config(argc, argv, &mi, &data);
 	init_game(&mi, &mlx, &img, &data);
 	render(-1, &data);
 	if (!mi.save)
