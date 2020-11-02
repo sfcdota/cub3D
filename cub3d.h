@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/05/17 02:06:30 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 21:58:52 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/02 23:19:01 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,6 +45,7 @@
 # define INVALID_ARGUMENT 11
 # define NO_ARGUMENTS 12
 # define ERROR_COUNT 13
+
 /*
  **************		STRUCTS		**************
 */
@@ -81,9 +82,9 @@ typedef struct	s_mi
 	double		r_speed;
 	double		m_speed;
 	char		*current_line;
-	char 		**error_messages;
-	int 		fd;
-	int 		fd_opened;
+	char		**error_messages;
+	int			fd;
+	int			fd_opened;
 }				t_mi;
 
 typedef struct	s_img
@@ -178,6 +179,48 @@ typedef struct	s_data
 	t_ray		*ray;
 }				t_data;
 
+/*
+ **************		UTILS		**************
+*/
+
+void			init_texture(t_data *data, int index);
+int				is_in_set(char c, char const *set);
+void			set_player_start_pos(t_mi *mi, int i, int j);
+int				is_space(char c);
+int				is_digit(char c);
+char			*next_non_space(char *line);
+char			*next_non_digit(char *line);
+char			*next_till_eol(char *line);
+char			*parse_path(char *begin, const char *end, t_data *data);
+int				parse_pos_num(char **line, t_data *data);
+int				create_trgb(int t, int r, int g, int b);
+void			check_map_line(char *str, t_data *data);
+char			*line_copy(double width, char *src, t_data *data);
+void			map_list_to_array(t_mi *mi, t_data *data);
+void			check_empty_params(t_mi *mi, t_data *data);
+void			init_messages(t_mi *mi, t_data *data);
+void			initialize_mi(t_mi *mi, t_data *data);
+
+/*
+ **************		FLAGS & MAP		**************
+*/
+
+void			parse_r(char **line, t_mi *mi, t_data *data);
+void			parse_textures(char **line, t_mi *mi, int texture_index,
+		t_data *data);
+void			parse_color(char **line, t_mi *mi, int color_index,
+		t_data *data);
+void			parse_flag(char **line, t_mi *mi, t_data *data);
+void			parse_map(char **line, t_mi *mi, int fd, t_data *data);
+void			check_left(t_mi *mi, t_data *data, int i, int j);
+void			check_right(t_mi *mi, t_data *data, int i, int j);
+void			check_up(t_mi *mi, t_data *data, int i, int j);
+void			check_down(t_mi *mi, t_data *data, int i, int j);
+void			is_closed(t_mi *mi, t_data *data, int i, int j);
+int				check_map(t_mi *mi, t_data *data);
+void			parse_sprites_info(t_mi *mi, t_data *data);
+void			parse_config(t_mi *mi, char *filename, t_data *data);
+void			parsing(int argc, char **argv, t_mi *mi, t_data *data);
 /*
  **************		ERRORS		**************
 */
