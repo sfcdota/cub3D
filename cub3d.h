@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   cub3D.h                                            :+:      :+:    :+:   */
+/*   cub3d.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/05/17 02:06:30 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 04:49:02 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/02 21:58:52 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,14 +34,17 @@
 # define SYS_ERROR 0
 # define INVALID_RESOLUTION 1
 # define INVALID_COLOR 2
-# define INVALID_MAP 3
-# define INVALID_TEXTURE 4
-# define DUPLICATE_TEXTURES 5
-# define FLAGS_REDIFINITION 5
-# define NO_MAP 6
-# define INVALID_CONFIG 6
-
-
+# define INVALID_TEXTURE 3
+# define DUPLICATE_FLAGS 4
+# define MISSING_FLAG 5
+# define INVALID_MAP 6
+# define NO_START_PLAYER_POSITION 7
+# define MULTIPLE_START_PLAYER_POSITION 8
+# define MAP_NOT_CLOSED 9
+# define INVALID_CONFIG 10
+# define INVALID_ARGUMENT 11
+# define NO_ARGUMENTS 12
+# define ERROR_COUNT 13
 /*
  **************		STRUCTS		**************
 */
@@ -67,7 +70,6 @@ typedef struct	s_mi
 	double		lines;
 	double		max_line_length;
 	char		**map;
-	int			error;
 	double		x;
 	double		y;
 	double		angle;
@@ -80,7 +82,8 @@ typedef struct	s_mi
 	double		m_speed;
 	char		*current_line;
 	char 		**error_messages;
-
+	int 		fd;
+	int 		fd_opened;
 }				t_mi;
 
 typedef struct	s_img

@@ -13,21 +13,16 @@
 #include "cub3d.h"
 
 
-void init_textures(t_data *data)
+void init_texture(t_data *data, int index)
 {
-	int i = -1;
-	while (++i < 5)
-	{
-		data->textures[i].img =
-				mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[i],
-									  &data->textures[i].width, &data->textures[i].height);
-		data->textures[i].addr =
-				mlx_get_data_addr(data->textures[i].img,
-								  &data->textures[i].bits_per_pixel, &data->textures[i].line_length,
-								  &data->textures[i].endian);
-		if (data->textures[i].img == NULL || data->textures[i].addr == NULL)
-			prog_error(data, INVALID_TEXTURE);
-	}
+	if ((data->textures[index].img =
+		mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[index],
+		&data->textures[index].width, &data->textures[index].height)) == NULL)
+		prog_error(data, INVALID_TEXTURE);
+	if ((data->textures[index].addr = mlx_get_data_addr(data->textures[index].img,
+	&data->textures[index].bits_per_pixel, &data->textures[index].line_length,
+		&data->textures[index].endian)) == NULL)
+		prog_error(data, INVALID_TEXTURE);
 }
 
 
@@ -37,7 +32,7 @@ int		is_in_set(char c, char const *set)
 	while (*set)
 		if (c == *set++)
 			return (1);
-	return (0);
+	return (*set == c ? 1 : 0);
 }
 
 void 	set_player_start_pos(t_mi *mi, int i, int j)
@@ -74,13 +69,6 @@ char 	*next_non_space(char *line)
 	return (line);
 }
 
-char	*next_till_space(char *line)
-{
-	while (*line && !is_space(*line))
-		line++;
-	return (line);
-}
-
 char	*next_non_digit(char *line)
 {
 	while (*line && is_digit(*line))
@@ -95,34 +83,6 @@ char 	*next_till_eol(char *line)
 	return (line);
 }
 
-int			ft_atoi_color(char **ptr, t_data *data)
-{
-	int	i;
-	int error;
-
-	error = 0;
-	i = 0;
-	while (is_space(**ptr))
-		(*ptr)++;
-
-	while (is_digit(**ptr))
-		if (i > 255)
-			error = -1;
-		else
-			i = i * 10 + (*(*ptr)++ - 48);
-	if (**ptr == '.')
-	{
-		(*ptr)++;
-		while (is_digit(**ptr))
-			(*ptr)++;
-	}
-	*ptr = next_non_space(*ptr);
-	return error ? -1 : i;
-}
-
-
-
-
 char	*parse_path(char *begin, const char *end, t_data *data)
 {
 	char *path;
@@ -134,44 +94,55 @@ char	*parse_path(char *begin, const char *end, t_data *data)
 	while (begin <= end)
 		*path++ = *begin++;
 	*path = '\0';
-
 	return (temp);
 }
 
-void	parse_num(char **line, t_mi *mi, t_data *data, int index)
+int		parse_pos_num(char **line, t_mi *mi, t_data *data)
 {
-	*line += sizeof(char) * 1;
+	int num;
+
 	*line = next_non_space(*line);
-	if (!is_digit(**line))
-		prog_error(data, INVALID_RESOLUTION);
-	mi->resolution[index] = ft_atoi(*line);
+	if (!is_digit(**line) || (**line == '0' && *(*line + 1) == '0'))
+		prog_error(data, INVALID_CONFIG);
+	num = ft_atoi(*line);
 	*line = next_non_digit(*line);
 	if (**line == '.')
-		*line += sizeof(char) * 1;
+		(*line)++;
 	*line = next_non_digit(*line);
 	*line = next_non_space(*line);
-	if (mi->resolution[index] > (index == 0 ?
-	RESOLUTION_WIDTH_MAX : RESOLUTION_HEIGHT_MAX))
-		mi->resolution[index] = index == 0 ?
-		RESOLUTION_WIDTH_MAX : RESOLUTION_HEIGHT_MAX;
+	return (num);
 }
 
 void	parse_r(char **line, t_mi *mi, t_data *data)
 {
-	parse_num(line, mi, data, 0);
-	if (**line != ',')
-		prog_error(data, INVALID_RESOLUTION);
-	parse_num(line, mi, data, 1);
+	int r1;
+	int r2;
+
+	if (mi->resolution[0] != -1 || mi->resolution[1] != -1)
+		prog_error(data, DUPLICATE_FLAGS);
+	(*line)++;
+	r1 = parse_pos_num(line, mi, data);
+	r2 = parse_pos_num(line, mi, data);
 	if (**line)
 		prog_error(data, INVALID_RESOLUTION);
+	if (r1 == -1 || r2 == -1)
+		prog_error(data, INVALID_RESOLUTION);
+	if (!mi->save)
+	{
+		mi->resolution[0] = r1 > RESOLUTION_WIDTH_MAX ? RESOLUTION_WIDTH_MAX :
+			r1;
+		mi->resolution[1] = r2 > RESOLUTION_HEIGHT_MAX ? RESOLUTION_HEIGHT_MAX :
+			r2;
+	}
 }
 
 void	parse_textures(char **line, t_mi *mi, int texture_index, t_data *data)
 {
 	char *temp;
+	int fd;
 
 	if (mi->textures[texture_index])
-		prog_error(data, DUPLICATE_TEXTURES);
+		prog_error(data, DUPLICATE_FLAGS);
 	*line += sizeof(char) * (texture_index < 4 ? 2 : 1);
 	*line = next_non_space(*line);
 	temp = *line;
@@ -179,7 +150,11 @@ void	parse_textures(char **line, t_mi *mi, int texture_index, t_data *data)
 	if (**line != '\0')
 		prog_error(data, INVALID_TEXTURE);
 	mi->textures[texture_index] = parse_path(temp, *line, data);
-	init_textures(data);
+	if ((fd = open(mi->textures[texture_index], O_RDONLY)) < 0)
+		prog_error(data, SYS_ERROR);
+	if ((close(fd)) < 0)
+		sys_error(data);
+	init_texture(data, texture_index);
 }
 
 int		create_trgb(int t, int r, int g, int b)
@@ -192,27 +167,26 @@ void	parse_color(char **line, t_mi *mi, int color_index, t_data *data)
 	int *color_array;
 	int i;
 
+	if (mi->colors[color_index] != -1)
+		prog_error(data, DUPLICATE_FLAGS);
 	i = -1;
 	if(!(color_array = malloc (sizeof(int) * 3)))
 		sys_error(data);
-	*line += sizeof(char) * 1;
+	(*line)++;
 	while (++i < 3 && *line)
 	{
-		if ((color_array[i] = ft_atoi_color(line, data)) >= 0)
+		if ((color_array[i] = parse_pos_num(line, mi, data)) >= 0 && color_array[i] < 256)
 		{
-			if (**line == ',' && i < 3)
+			if (**line == ',' && i < 2)
 				(*line)++;
-			else if (**line)
-					*line = NULL;
+			else if (i == 2 && **line)
+					prog_error(data, INVALID_COLOR);
 		}
 		else
-			*line = NULL;
+			prog_error(data, INVALID_COLOR);
 	}
-	if (*line)
-		mi->colors[color_index] = create_trgb(0, color_array[0],
+	mi->colors[color_index] = create_trgb(0, color_array[0],
 			color_array[1], color_array[2]);
-	else
-		mi->error = 0;
 	clear_ptr(color_array);
 }
 
@@ -236,32 +210,40 @@ void	parse_flag(char **line, t_mi *mi, t_data *data)
 		parse_textures(line, mi, 4, data);
 }
 
-
-int		parse_map(char **line, t_mi *mi, int fd, t_data *data)
+void	check_map_line(char *str, t_data *data)
 {
-	int status = 1;
-	t_list *temp;
-	int len;
 
-	mi->map_list = NULL;
-	while (status > 0 && *next_non_space(*line) != '\0')
+	if (!next_non_space(str))
+		prog_error(data, INVALID_MAP);
+	while (*str)
+		if (!is_in_set(*str++, "NSWE012 "))
+			prog_error(data, INVALID_MAP);
+}
+
+void	parse_map(char **line, t_mi *mi, int fd, t_data *data)
+{
+	int status;
+	t_list *temp;
+	size_t len;
+
+	status = 1;
+	while (status >= 0)
 	{
+		check_map_line(*line, data);
 		mi->lines++;
 		len = ft_strlen(*line);
 		if (mi->max_line_length < len)
 			mi->max_line_length = len;
-		if (!(temp = ft_lstnew(ft_strdup(*line))))
-			return -1;
+		if (!(temp = ft_lstnew(*line)))
+			sys_error(data);
 		ft_lstadd_back(&mi->map_list, temp);
-		free(*line);
-		if (status > 0)
-			status = get_next_line(fd, line);
-	}
-	while (*next_non_space(*line) == '\0' && status > 0)
+		*line = NULL;
+		if (!status)
+			break;
 		status = get_next_line(fd, line);
-	if (status < 0 || *next_non_space(*line) != '\0')
-		mi->error = 0;
-	return (0);
+	}
+	if (status < 0)
+		sys_error(data);
 }
 
 
@@ -271,12 +253,52 @@ char	*line_copy(double width, char *src, t_data *data)
 	int j;
 
 	j = -1;
-	if(!(dest = ft_calloc(sizeof(char), (int)width + 1)))
-		return NULL;
+	if(!(dest = ft_calloc(sizeof(char), (size_t)width + 1)))
+		sys_error(data);
 	while (++j < width)
 		dest[j] = *src ? *src++ : ' ';
 	dest[j] = '\0';
 	return (dest);
+}
+
+void check_left(t_mi *mi, t_data *data, int i, int j)
+{
+	while (!is_in_set(mi->map[i][j], " 1") && j > 0)
+		j--;
+	if (is_in_set(mi->map[i][j]," 02NSWE"))
+		prog_error(data, MAP_NOT_CLOSED);
+}
+
+void check_right(t_mi *mi, t_data *data, int i, int j)
+{
+	while (!is_in_set(mi->map[i][j], " 1") && j <= mi->max_line_length)
+		j++;
+	if (is_in_set(mi->map[i][j]," 02NSWE"))
+		prog_error(data, MAP_NOT_CLOSED);
+}
+
+void check_up(t_mi *mi, t_data *data, int i, int j)
+{
+	while (!is_in_set(mi->map[i][j], " 1") && i > 0)
+		i--;
+	if (is_in_set(mi->map[i][j]," 02NSWE"))
+		prog_error(data, MAP_NOT_CLOSED);
+}
+
+void check_down(t_mi *mi, t_data *data, int i, int j)
+{
+	while (!is_in_set(mi->map[i][j], " 1") && i <= mi->lines)
+		i++;
+	if (is_in_set(mi->map[i][j]," 02NSWE"))
+		prog_error(data, MAP_NOT_CLOSED);
+}
+
+void is_closed(t_mi *mi, t_data *data, int i, int j)
+{
+	check_left(mi, data, i, j);
+	check_right(mi, data, i, j);
+	check_up(mi, data, i, j);
+	check_down(mi, data, i, j);
 }
 
 int check_map(t_mi *mi, t_data *data)
@@ -293,45 +315,39 @@ int check_map(t_mi *mi, t_data *data)
 			if (is_in_set(mi->map[i][j], "NSWE"))
 			{
 				if (mi->angle != -100)
-					return (-1);
+					prog_error(data, MULTIPLE_START_PLAYER_POSITION);
 				else
 					set_player_start_pos(mi, i, j);
 			}
-			if (is_in_set(mi->map[i][j], "NSWE0") && ((j == 0 ||
-			j == mi->max_line_length - 1 || i == 0 || i == mi->lines - 1) ||
-			(mi->map[i - 1][j] == ' ' || mi->map[i + 1][j] == ' ' ||
-			mi->map[i][j - 1] == ' ' || mi->map[i][j + 1] == ' ')))
-					return (-1);
+			if (is_in_set(mi->map[i][j], "NSWE0"))
+				is_closed(mi, data, i, j);
 			if (mi->map[i][j] == '2')
 				mi->sprites_count++;
 		}
 	}
+	if (mi->x == -1 || mi->y == -1)
+		prog_error(data, NO_START_PLAYER_POSITION);
 	mi->map[(int)(mi->x)][(int)mi->y] = '0';
-	return (1);
 }
 
-int	map_list_to_array(t_mi *mi, t_data *data)
+void	map_list_to_array(t_mi *mi, t_data *data)
 {
 	char **map;
 	int i;
 	t_list *map_list;
 
 	map_list = mi->map_list;
-	i = 0;
-	if(mi->lines == 0)
-		prog_error(data, "No map.", 0);
+	i = -1;
 	if(!(map = malloc(sizeof(char *) * (int)mi->lines)))
 		sys_error(data);
-	while (i < mi->lines)
+	while (++i < mi->lines)
 	{
 		if(!(map[i] = line_copy(mi->max_line_length, (char *)map_list->content, data)))
-			return -1;
+			sys_error(data);
 		map_list = map_list->next;
-		i++;
 	}
 	ft_lstclear(&(mi->map_list), clear_ptr);
 	mi->map = map;
-	return check_map(mi, data);
 }
 
 void	parse_sprites_info(t_mi *mi, t_data *data)
@@ -361,53 +377,74 @@ void	parse_sprites_info(t_mi *mi, t_data *data)
 	}
 }
 
-int 	check_map_info(t_mi *mi, t_data *data)
+void	check_empty_params(t_mi *mi, t_data *data)
 {
-	int i;
-
-	i = 0;
-	while (i < 5)
-	{
-		if (i < 2)
-		{
-			if (mi->colors[i] == -1 || mi->resolution[i] == -1 || mi->x == -1 || mi->y == -1)
-				return (-1);
-		}
-		if (mi->textures[i] == NULL)
-			return (-1);
-		i++;
-	}
-	if (mi->lines == 0 || mi->angle == -100
-	|| mi->max_line_length == 0 || mi->map == NULL || mi->error >= 0)
-		return (-1);
-	return (1);
+	if (mi->colors[0] == -1 || mi->colors[1] == -1 || mi->resolution[0] == -1 ||
+		mi->resolution[1] == -1 || mi->textures[0] == NULL ||
+		mi->textures[1] == NULL || mi->textures[2] == NULL ||
+		mi->textures[3] == NULL || mi->textures[4] == NULL ||
+		mi->map_list->content == NULL)
+		prog_error(data, MISSING_FLAG);
 }
 
-int		parse(t_mi *mi, char *filename, t_data *data)
+void	parse_config(t_mi *mi, char *filename, t_data *data)
 {
-	int fd;
 	int status;
 	char *temp;
 
-	fd = open(filename, O_RDONLY);
+	if ((mi->fd = open(filename, O_RDONLY)) == -1)
+		sys_error(data);
+	mi->fd_opened = 1;
 	mi->current_line = NULL;
-	status = 1;
-	while (status && (status = get_next_line(fd, mi->current_line)) > 0)
+	while ((status = get_next_line(mi->fd, &mi->current_line)) > 0)
 	{
-		if (*(temp = next_non_space(mi->current_line)) && *temp != '1')
+		if (is_in_set(*(temp = next_non_space(mi->current_line)), "NSWEFCR"))
 			parse_flag(&temp, mi, data);
-		else if (*temp == '1')
-			status = parse_map(mi->current_line, mi, fd, data);
+		else if (is_in_set(*temp, "012"))
+			parse_map(&mi->current_line, mi, mi->fd, data);
+		else if (*temp)
+			prog_error(data, INVALID_CONFIG);
 		clear_ptr(mi->current_line);
 	}
-	close(fd);
-	if (status < 0) // -1 = read error, other = msges
-		mi->error = 10;
-	else
-		status = map_list_to_array(mi, data);
-	if (status >= 0)
-		status = check_map_info(mi, data);
-	return status;
+	check_empty_params(mi, data);
+	if ((close(mi->fd)) == -1 || status < 0)
+		sys_error(data);
+	mi->fd_opened = 0;
+	map_list_to_array(mi, data);
+	check_map(mi, data);
+}
+
+
+void	init_messages(t_mi *mi, t_data *data)
+{
+	if (!(mi->error_messages = malloc(ERROR_COUNT * sizeof(char *))))
+		sys_error(data);
+	if (!(mi->error_messages[SYS_ERROR] = ft_strdup("SYSTEM ERROR")))
+		sys_error(data);
+	if (!(mi->error_messages[INVALID_RESOLUTION] = ft_strdup("INVALID RESOLUTION")))
+		sys_error(data);
+	if (!(mi->error_messages[INVALID_COLOR] = ft_strdup("INVALID COLOR")))
+		sys_error(data);
+	if (!(mi->error_messages[INVALID_TEXTURE] = ft_strdup("INVALID TEXTURE")))
+		sys_error(data);
+	if (!(mi->error_messages[DUPLICATE_FLAGS] = ft_strdup("DUPLICATE FLAGS")))
+		sys_error(data);
+	if (!(mi->error_messages[MISSING_FLAG] = ft_strdup("MISSING FLAG")))
+		sys_error(data);
+	if (!(mi->error_messages[INVALID_MAP] = ft_strdup("INVALID MAP")))
+		sys_error(data);
+	if (!(mi->error_messages[NO_START_PLAYER_POSITION] = ft_strdup("NO START POSITION")))
+		sys_error(data);
+	if (!(mi->error_messages[MULTIPLE_START_PLAYER_POSITION] = ft_strdup("MULTIPLE START POSITION")))
+		sys_error(data);
+	if (!(mi->error_messages[MAP_NOT_CLOSED] = ft_strdup("MAP NOT CLOSED")))
+		sys_error(data);
+	if (!(mi->error_messages[INVALID_CONFIG] = ft_strdup("INVALID CONFIG")))
+		sys_error(data);
+	if (!(mi->error_messages[INVALID_ARGUMENT] = ft_strdup("INVALID ARGUMENT")))
+		sys_error(data);
+	if (!(mi->error_messages[NO_ARGUMENTS] = ft_strdup("NO ARGUMENTS")))
+		sys_error(data);
 }
 
 void	initialize_mi(t_mi *mi, t_data *data)
@@ -415,18 +452,38 @@ void	initialize_mi(t_mi *mi, t_data *data)
 	int i;
 
 	i = -1;
-	mi->sprites_count = 0;
-	mi->max_line_length = 0;
-	mi->lines = 0;
-	mi->map_list = NULL;
-	mi->map = NULL;
-	mi->angle = -100;
+
+	//инициализировать мессаги и очищать в clear!
+	if (!(data->textures = malloc (sizeof(t_texture) * 5)))
+		sys_error(data);
+	while (++i < 5)
+	{
+		data->textures->img = NULL;
+		data->textures->addr = NULL;
+	}
+	i = -1;
 	if (!((mi->colors = malloc(sizeof(int) * 2)) &&
 	(mi->textures = malloc(sizeof(char *) * 5)) &&
 	(mi->resolution = malloc (sizeof(int) * 2))))
 		sys_error(data);
+	mi->map_list = NULL;
+	mi->lines = 0;
+	mi->max_line_length = 0;
+	mi->map = NULL;
 	mi->x = -1;
 	mi->y = -1;
+	mi->angle = -100;
+	mi->save = 0;
+	mi->sprites_count = 0;
+	mi->sprites = NULL;
+	mi->sprites_order = NULL;
+	mi->sprites_distance = NULL;
+	mi->r_speed = ROTATION_SPEED;
+	mi->m_speed = MOVE_SPEED;
+	mi->current_line = NULL;
+	init_messages(mi, data);
+	mi->fd = -228;
+	mi->fd_opened = 0;
 	while (++i < 5)
 	{
 		if (i < 2)
@@ -436,36 +493,24 @@ void	initialize_mi(t_mi *mi, t_data *data)
 		}
 		mi->textures[i] = NULL;
 	}
-	mi->error = -100;
-	mi->save = 0;
 }
 
-int parse_config(int argc, char **argv, t_mi *mi, t_data *data)
+void parsing(int argc, char **argv, t_mi *mi, t_data *data)
 {
-	int status;
-
-	if (argc == 2 || argc == 3)
+	if (argc == 1 || argc > 3)
+		prog_error(data, NO_ARGUMENTS);
+	if (argc == 3)
 	{
-		initialize_mi(mi, data);
-		status = parse(mi, argv[1], data);
-		if (argc == 3 && ft_strncmp("--save", argv[2], 10))
+		if (ft_strncmp("--save", argv[2], 10))
 			mi->save = 1;
-		if (status != -1 && mi->sprites_count)
-		{
-			parse_sprites_info(mi, data);
-		}
+		else
+			prog_error(data, INVALID_ARGUMENT);
 	}
-	else
-		status = -1;
-	if (status == -1 || mi->error >= 0)
-		printf("there is an error ... ERROR CODE = %d\n", status);
-	mi->r_speed = ROTATION_SPEED;
-	mi->m_speed = MOVE_SPEED;
-	if (!(data->textures = malloc (sizeof(t_texture) * 5)) || !data->mlx->mlx)
-		sys_error(data);
-
-	return (status <= 0 ? -1 : 1);
+	parse_config(mi, argv[1], data);
+	if (mi->sprites_count)
+		parse_sprites_info(mi, data);
 }
+
 
 int main (int argc, char **argv)
 {
@@ -479,9 +524,11 @@ int main (int argc, char **argv)
 	data.img = &img;
 	data.mi = &mi;
 	data.ray = &ray;
+	init_messages(&mi, &data);
+	initialize_mi(&mi, &data);
 	if (!(data.mlx->mlx = mlx_init()))
 		prog_error(&data, SYS_ERROR);
-	parse_config(argc, argv, &mi, &data);
+	parsing(argc, argv, &mi, &data);
 	init_game(&mi, &mlx, &img, &data);
 	render(-1, &data);
 	if (!mi.save)
