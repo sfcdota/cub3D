@@ -99,8 +99,14 @@ void	parse_config(t_mi *mi, char *filename, t_data *data)
 
 void	parsing(int argc, char **argv, t_mi *mi, t_data *data)
 {
+	size_t len;
+	
+	len = ft_strlen(argv[2]);
 	if (argc == 1 || argc > 3)
 		prog_error(data, NO_ARGUMENTS);
+	if (argv[2][len - 1] != 'b' || argv[2][len - 2] != 'u' ||
+	argv[2][len - 3] != 'c' || argv[2][len - 4] != '.')
+		prog_error(data, INVALID_ARGUMENT);
 	if (argc == 3)
 	{
 		if (!ft_strncmp("--save", argv[2], 10))
