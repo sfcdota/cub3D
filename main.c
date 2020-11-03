@@ -30,14 +30,15 @@ int	main(int argc, char **argv)
 	parsing(argc, argv, &mi, &data);
 	init_game(&mi, &mlx, &img, &data);
 	render(-1, &data);
-	if (mi.save)
-		clear(&mi, &data);
-	else
+	if (!mi.save)
 	{
 		mlx_hook(mlx.win, KEY_PRESS_EVENT, KEY_PRESS_MASK, render, &data);
 		mlx_hook(mlx.win, DESTROY_NOTIFY, DESTROY_NOTIFY_MASK,
 			handle_exit, &data);
 		mlx_loop(mlx.mlx);
 	}
+	else
+		init_bmp(&data);
+	clear(&mi, &data);
 	return (0);
 }

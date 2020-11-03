@@ -28,8 +28,8 @@
 # define KEY_PRESS_MASK 0
 # define DESTROY_NOTIFY 17
 # define DESTROY_NOTIFY_MASK 17
-# define RESOLUTION_WIDTH_MAX 2560
-# define RESOLUTION_HEIGHT_MAX 1440
+# define RESOLUTION_WIDTH_MAX 20000
+# define RESOLUTION_HEIGHT_MAX 20000
 # define EXIT_MESSAGE "\nExit. Thanks for playing.\n"
 # define SYS_ERROR 0
 # define INVALID_RESOLUTION 1
@@ -234,14 +234,15 @@ void			prog_error(t_data *data, int error_code);
 
 void			handle_move(int key, t_mi *mi, t_ray *ray);
 void			handle_rotate(t_ray *ray, double rotation);
-void			handle_exit(t_data *data);
+int				handle_exit(t_data *data);
 void			key_pressed(int key, t_mi *mi, t_ray *ray, t_data *data);
 
 /*
  **************		RAYCASTING		**************
 */
 
-int				get_img_tex_color(t_texture *texture, int x, int y);
+unsigned int	get_img_color(t_img *img, int x, int y);
+unsigned int	get_img_tex_color(t_texture *texture, int x, int y);
 void			my_mlx_pixel_put(t_img *img, int x, int y, unsigned int color);
 void			draw_ray(t_mi *mi, t_ray *ray, t_data *data);
 void			sort_sprites(t_mi *mi, t_ray *ray);
@@ -252,7 +253,7 @@ void			sprites_start_conditions(t_mi *mi, t_ray *ray, t_data *data);
 void			calc_sprites(t_mi *mi, t_ray *ray);
 void			put_sprites(t_mi *mi, t_ray *ray, t_data *data);
 void			draw_sprites(t_mi *mi, t_ray *ray, t_data *data);
-void			render(int key, t_data *data);
+int				render(int key, t_data *data);
 void			init_game(t_mi *mi, t_mlx *mlx, t_img *img, t_data *data);
-
+void	init_bmp(t_data *data);
 #endif
