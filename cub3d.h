@@ -255,5 +255,6 @@ void			put_sprites(t_mi *mi, t_ray *ray, t_data *data);
 void			draw_sprites(t_mi *mi, t_ray *ray, t_data *data);
 int				render(int key, t_data *data);
 void			init_game(t_mi *mi, t_mlx *mlx, t_img *img, t_data *data);
-void	init_bmp(t_data *data);
+unsigned char	*init_bmp(int extrabytes, t_mi *mi, t_data *data);
+void			create_bmp(t_mi *mi, t_data *data);
 #endif

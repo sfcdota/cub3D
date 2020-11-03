@@ -12,7 +12,24 @@
 
 #include "cub3d.h"
 
-int	main(int argc, char **argv)
+void	start(t_data *data)
+{
+	init_game(data->mi, data->mlx, data->img, data);
+	render(-1, data);
+	if (!data->mi->save)
+	{
+		mlx_hook(data->mlx->win,
+		KEY_PRESS_EVENT, KEY_PRESS_MASK, render, data);
+		mlx_hook(data->mlx->win,
+		DESTROY_NOTIFY, DESTROY_NOTIFY_MASK, handle_exit, data);
+		mlx_loop(data->mlx->mlx);
+	}
+	else
+		create_bmp(data->mi, data);
+	clear(data->mi, data);
+}
+
+int		main(int argc, char **argv)
 {
 	t_mi	mi;
 	t_img	img;
@@ -28,17 +45,6 @@ int	main(int argc, char **argv)
 	if (!(data.mlx->mlx = mlx_init()))
 		prog_error(&data, SYS_ERROR);
 	parsing(argc, argv, &mi, &data);
-	init_game(&mi, &mlx, &img, &data);
-	render(-1, &data);
-	if (!mi.save)
-	{
-		mlx_hook(mlx.win, KEY_PRESS_EVENT, KEY_PRESS_MASK, render, &data);
-		mlx_hook(mlx.win, DESTROY_NOTIFY, DESTROY_NOTIFY_MASK,
-			handle_exit, &data);
-		mlx_loop(mlx.mlx);
-	}
-	else
-		init_bmp(&data);
-	clear(&mi, &data);
+	start(&data);
 	return (0);
 }
