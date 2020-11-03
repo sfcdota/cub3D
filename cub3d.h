@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/05/17 02:06:30 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 23:19:01 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/03 23:20:23 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@
 # include <stdio.h>
 # include "libft/libft.h"
 # include "get_next_line/get_next_line.h"
+# include "minilibx/mlx.h"
 # define ROTATION_SPEED 0.25
 # define MOVE_SPEED 0.5
 # define PLANE_X 0.0
