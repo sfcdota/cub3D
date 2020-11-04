@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   get_next_line.h                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbach <cbach@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/07/21 13:02:38 by cbach             #+#    #+#             */
-/*   Updated: 2020/07/23 21:14:56 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/02 15:57:45 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 #  define FD_MAX_COUNT 1024
 # endif
 # ifndef BUFFER_SIZE
-#  define BUFFER_SIZE 0
+#  define BUFFER_SIZE 128
 # endif
 # include <unistd.h>
 # include <stdlib.h>
