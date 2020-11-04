@@ -1,63 +1,81 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   parse_utils2.c                                     :+:      :+:    :+:   */
+/*   parse_utils.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2020/11/02 23:29:20 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 23:31:42 by cbach            ###   ########.fr       */
+/*   Created: 2020/11/02 23:29:17 by cbach             #+#    #+#             */
+/*   Updated: 2020/11/02 23:33:12 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../cub3d.h"
 
-int		create_trgb(int t, int r, int g, int b)
+void	init_texture(t_data *data, int index)
 {
-	return (t << 24 | r << 16 | g << 8 | b);
+	if ((data->textures[index].img =
+	mlx_xpm_file_to_image(data->mlx->mlx, data->mi->textures[index],
+	&data->textures[index].width, &data->textures[index].height)) == NULL)
+		prog_error(data, INVALID_TEXTURE);
+	data->textures[index].addr =
+	mlx_get_data_addr(data->textures[index].img,
+	&data->textures[index].bits_per_pixel, &data->textures[index].line_length,
+	&data->textures[index].endian);
 }
 
-char	*line_copy(double width, char *src, t_data *data)
+void	set_player_start_pos(t_mi *mi, int i, int j)
 {
-	char	*dest;
-	int		j;
+	int direction;
 
-	j = -1;
-	if (!(dest = ft_calloc(sizeof(char), (size_t)width + 1)))
+	if (mi->map[i][j] == 'E')
+		direction = 0;
+	if (mi->map[i][j] == 'N')
+		direction = 1;
+	if (mi->map[i][j] == 'W')
+		direction = 2;
+	if (mi->map[i][j] == 'S')
+		direction = 3;
+	mi->x = i + 0.5;
+	mi->y = j + 0.5;
+	mi->angle = direction * M_PI_2;
+}
+
+char	*parse_path(char *begin, const char *end, t_data *data)
+{
+	char *path;
+	char *temp;
+
+	if (!(path = malloc((end - begin) / sizeof(char) + 1)))
 		sys_error(data);
-	while (++j < width)
-		dest[j] = *src ? *src++ : ' ';
-	dest[j] = '\0';
-	return (dest);
+	temp = path;
+	while (begin <= end)
+		*path++ = *begin++;
+	*path = '\0';
+	return (temp);
 }
 
-void	map_list_to_array(t_mi *mi, t_data *data)
+int		parse_pos_num(char **line, t_data *data)
 {
-	char	**map;
-	int		i;
-	t_list	*map_list;
+	int num;
 
-	map_list = mi->map_list;
-	i = -1;
-	if (!(map = malloc(sizeof(char *) * (int)mi->lines)))
-		sys_error(data);
-	while (++i < mi->lines)
-	{
-		if (!(map[i] =
-		line_copy(mi->max_line_length, (char *)map_list->content, data)))
-			sys_error(data);
-		map_list = map_list->next;
-	}
-	ft_lstclear(&(mi->map_list), clear_ptr);
-	mi->map = map;
+	*line = next_non_space(*line);
+	if (!ft_isdigit(**line) || (**line == '0' && *(*line + 1) == '0'))
+		prog_error(data, INVALID_CONFIG);
+	num = ft_atoi(*line);
+	*line = next_non_digit(*line);
+	if (**line == '.')
+		(*line)++;
+	*line = next_non_digit(*line);
+	*line = next_non_space(*line);
+	return (num);
 }
 
-void	check_empty_params(t_mi *mi, t_data *data)
+void	check_map_line(char *str, t_data *data)
 {
-	if (mi->colors[0] == -1 || mi->colors[1] == -1 || mi->resolution[0] == -1 ||
-		mi->resolution[1] == -1 || mi->textures[0] == NULL ||
-		mi->textures[1] == NULL || mi->textures[2] == NULL ||
-		mi->textures[3] == NULL || mi->textures[4] == NULL ||
-		mi->map_list->content == NULL)
-		prog_error(data, MISSING_FLAG);
+	if (!next_non_space(str))
+		prog_error(data, INVALID_MAP);
+	while (*str)
+		if (!is_in_set(*str++, "NSWE012 "))
+			prog_error(data, INVALID_MAP);
 }

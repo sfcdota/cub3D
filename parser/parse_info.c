@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/11/02 23:29:14 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 23:35:29 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/04 19:12:12 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,17 +27,17 @@ void	parse_r(char **line, t_mi *mi, t_data *data)
 	if (r1 == -1 || r2 == -1)
 		prog_error(data, INVALID_RESOLUTION);
 	if (!mi->save)
-	{
-		mi->resolution[0] = r1 > RESOLUTION_WIDTH_MAX ? RESOLUTION_WIDTH_MAX :
-							r1;
-		mi->resolution[1] = r2 > RESOLUTION_HEIGHT_MAX ? RESOLUTION_HEIGHT_MAX :
-							r2;
-	}
+		mlx_get_screen_size(data->mlx->mlx,
+		&mi->resolution[0], &mi->resolution[1]);
 	else
 	{
-		mi->resolution[0] = r1;
-		mi->resolution[1] = r2;
+		mi->resolution[0] = WIDTH_MAX;
+		mi->resolution[1] = HEIGHT_MAX;
 	}
+	if (mi->resolution[0] > r1)
+		mi->resolution[0] = r1;
+	if (mi->resolution[1] > r2)
+		mi->resolution[1] = r2;
 }
 
 void	parse_textures(char **line, t_mi *mi, int texture_index, t_data *data)

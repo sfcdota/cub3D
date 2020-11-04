@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/11/02 23:29:22 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 23:34:21 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/04 19:40:48 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -100,12 +100,13 @@ void	parse_config(t_mi *mi, char *filename, t_data *data)
 void	parsing(int argc, char **argv, t_mi *mi, t_data *data)
 {
 	size_t len;
-	
-	len = ft_strlen(argv[2]);
-	if (argc == 1 || argc > 3)
+
+	if (argc == 0 || argc > 3)
 		prog_error(data, NO_ARGUMENTS);
-	if (argv[2][len - 1] != 'b' || argv[2][len - 2] != 'u' ||
-	argv[2][len - 3] != 'c' || argv[2][len - 4] != '.')
+	len = ft_strlen(argv[1]);
+	if (len < 4 || argv[1][len - 1] != 'b' ||
+	argv[1][len - 2] != 'u' ||
+	argv[1][len - 3] != 'c' || argv[1][len - 4] != '.')
 		prog_error(data, INVALID_ARGUMENT);
 	if (argc == 3)
 	{

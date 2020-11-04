@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: cbach <cbach@student.42.fr>                +#+  +:+       +#+         #
+#    By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2020/05/17 15:43:49 by cbach             #+#    #+#              #
-#    Updated: 2020/05/28 23:37:45 by cbach            ###   ########.fr        #
+#    Updated: 2020/11/04 18:52:46 by cbach            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -74,34 +74,34 @@ endif
 .PHONY: all bonus clean fclean re so
 
 all: $(NAME)
-	rm -f .depend
+	@rm -f .depend
 
 $(NAME): $(OBJ_FILES)
-	ar -rcs $(NAME) $?
+	@ar -rcs $(NAME) $?
 
 bonus:
 	$(MAKE) BONUS_FILES=1 all
 
 .depend: $(SRC) $(BONUS)
-	rm -f .depend
-	gcc $(FLAGS) -MM $^ > .depend;
+	@rm -f .depend
+	@gcc $(FLAGS) -MM $^ > .depend;
 
 -include .depend
 
 %.o:
-	gcc $(FLAGS) -c $< -o $@
+	@gcc $(FLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJ) $(OBJ_BONUS) .depend
+	@rm -f $(OBJ) $(OBJ_BONUS) .depend
 
 fclean: clean
-	rm -f $(NAME)
-	rm -f $(NAME_SO)
+	@rm -f $(NAME)
+	@rm -f $(NAME_SO)
 
 re: fclean all
 
 so: $(NAME_SO)
 
 $(NAME_SO):
-	gcc -c -fPIC *.c
-	gcc -shared -o libft.so *.o
+	@gcc -c -fPIC *.c
+	@gcc -shared -o libft.so *.o

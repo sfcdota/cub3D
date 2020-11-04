@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/11/02 04:08:29 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 04:19:04 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/04 17:46:51 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 #define INFO_HEADER_SIZE 40
 #define OPEN_FLAGS O_WRONLY | O_TRUNC | O_APPEND | O_CREAT
 
-unsigned char	*init_bmp(int extrabytes, t_mi *mi, t_data *data)
+void			init_bmp(int extrabytes, t_mi *mi, t_data *data)
 {
 	static int				filesize;
 	static unsigned char	fheader[14] =

@@ -6,14 +6,13 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/05/17 02:06:30 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/03 23:20:23 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/04 19:11:46 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CUB3D_H
 # define CUB3D_H
 # include <stdlib.h>
-# include <mlx.h>
 # include <math.h>
 # include <fcntl.h>
 # include <errno.h>
@@ -29,8 +28,8 @@
 # define KEY_PRESS_MASK 0
 # define DESTROY_NOTIFY 17
 # define DESTROY_NOTIFY_MASK 17
-# define RESOLUTION_WIDTH_MAX 20000
-# define RESOLUTION_HEIGHT_MAX 20000
+# define WIDTH_MAX 500
+# define HEIGHT_MAX 500
 # define EXIT_MESSAGE "\nExit. Thanks for playing.\n"
 # define SYS_ERROR 0
 # define INVALID_RESOLUTION 1
@@ -256,6 +255,6 @@ void			put_sprites(t_mi *mi, t_ray *ray, t_data *data);
 void			draw_sprites(t_mi *mi, t_ray *ray, t_data *data);
 int				render(int key, t_data *data);
 void			init_game(t_mi *mi, t_mlx *mlx, t_img *img, t_data *data);
-unsigned char	*init_bmp(int extrabytes, t_mi *mi, t_data *data);
+void			init_bmp(int extrabytes, t_mi *mi, t_data *data);
 void			create_bmp(t_mi *mi, t_data *data);
 #endif
