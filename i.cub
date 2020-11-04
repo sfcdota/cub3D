@@ -1,5 +1,5 @@
 
-R 500 600
+R 20000 20000
 NO ./pics/xpms/greystone.xpm
 SO ./pics/xpms/bluestone.xpm
 WE ./pics/xpms/mossy.xpm

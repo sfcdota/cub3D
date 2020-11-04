@@ -28,8 +28,8 @@
 # define KEY_PRESS_MASK 0
 # define DESTROY_NOTIFY 17
 # define DESTROY_NOTIFY_MASK 17
-# define WIDTH_MAX 500
-# define HEIGHT_MAX 500
+# define WIDTH_MAX 16384
+# define HEIGHT_MAX 16384
 # define EXIT_MESSAGE "\nExit. Thanks for playing.\n"
 # define SYS_ERROR 0
 # define INVALID_RESOLUTION 1
