@@ -6,7 +6,7 @@
 #    By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2020/11/03 22:27:45 by cbach             #+#    #+#              #
-#    Updated: 2020/11/04 19:44:49 by cbach            ###   ########.fr        #
+#    Updated: 2020/11/04 22:32:40 by cbach            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -25,6 +25,8 @@ PARSER_DIR = parser
 RAYCASTING_DIR = raycasting
 
 MINILIBX_DIR = minilibx
+
+MINILIBX = libmlx.dylib
 
 HEADERS =										\
 				$(wildcard $(LIBFT_DIR)/*.h)	\
@@ -62,10 +64,11 @@ make_libs:
 	$(MAKE) -C libft all
 	$(MAKE) -C libft bonus
 	$(MAKE) -C minilibx all
-	@export DYLD_LIBRARY_PATH=./minilibx/
+
 
 $(NAME): $(OBJ_FILES)
-	@gcc $(FLAGS) $(MLX_FLAGS) $(OBJ_FILES) -L./libft -lft -L./minilibx -lmlx -o $(NAME)
+	@cp ${MINILIBX_DIR}/${MINILIBX} ${CUB3D_DIR}
+	@gcc $(FLAGS) $(MLX_FLAGS) $(OBJ_FILES) -L${LIBFT_DIR} -lft -L${MINILIBX_DIR} -lmlx -o $(NAME)
 
 bonus:
 	$(MAKE) BONUS_FILES=1 all
@@ -81,12 +84,12 @@ bonus:
 
 clean:
 	@rm -f $(OBJ) $(OBJ_BONUS) .depend
-	@rm -f libmlx.dylib
 	$(MAKE) -C $(LIBFT_DIR) clean
 	$(MAKE) -C $(MINILIBX_DIR) clean
 
 fclean: clean
 	@rm -f $(NAME)
+	@rm -f ${MINILIBX}
 	$(MAKE) -C $(LIBFT_DIR) fclean
 
 norm:

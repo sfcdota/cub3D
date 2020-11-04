@@ -1,5 +1,6 @@
 
-R 20000 20000
+
+R 1000 1000
 NO ./pics/xpms/greystone.xpm
 SO ./pics/xpms/bluestone.xpm
 WE ./pics/xpms/mossy.xpm
@@ -14,4 +15,3 @@ C 0,55,         70
 10001
 10N01
 1111111111111111111111111111111
-

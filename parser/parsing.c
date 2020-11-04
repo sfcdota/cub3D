@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/11/02 23:29:22 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/04 19:40:48 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/04 22:36:21 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,7 +101,7 @@ void	parsing(int argc, char **argv, t_mi *mi, t_data *data)
 {
 	size_t len;
 
-	if (argc == 0 || argc > 3)
+	if (argc == 1 || argc > 3)
 		prog_error(data, NO_ARGUMENTS);
 	len = ft_strlen(argv[1]);
 	if (len < 4 || argv[1][len - 1] != 'b' ||
