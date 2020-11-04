@@ -73,7 +73,7 @@ int		parse_pos_num(char **line, t_data *data)
 
 void	check_map_line(char *str, t_data *data)
 {
-	if (!next_non_space(str))
+	if (*next_non_space(str) == '\0')
 		prog_error(data, INVALID_MAP);
 	while (*str)
 		if (!is_in_set(*str++, "NSWE012 "))
