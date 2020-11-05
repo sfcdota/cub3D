@@ -6,7 +6,7 @@
 /*   By: cbach <cbach@student.21-school.ru>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/11/02 04:40:16 by cbach             #+#    #+#             */
-/*   Updated: 2020/11/02 04:41:56 by cbach            ###   ########.fr       */
+/*   Updated: 2020/11/04 23:40:35 by cbach            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,20 +17,20 @@ void	handle_move(int key, t_mi *mi, t_ray *ray)
 	ray->temp_d = key == 13 || key == 0 ? mi->m_speed : -mi->m_speed;
 	if (key == 13 || key == 1)
 	{
-		if (mi->map[(int)(ray->pos_x + 1.5 * ray->dir_x * ray->temp_d)]
+		if (mi->map[(int)(ray->pos_x + 1.1 * ray->dir_x * ray->temp_d)]
 		[(int)ray->pos_y] == '0')
 			ray->pos_x += ray->dir_x * ray->temp_d;
 		if (mi->map[(int)(ray->pos_x)]
-		[(int)(ray->pos_y + 1.5 * ray->dir_y * ray->temp_d)] == '0')
+		[(int)(ray->pos_y + 1.1 * ray->dir_y * ray->temp_d)] == '0')
 			ray->pos_y += ray->dir_y * ray->temp_d;
 	}
 	if (key == 0 || key == 2)
 	{
-		if (mi->map[(int)(ray->pos_x - 1.5 * ray->dir_y * ray->temp_d)]
+		if (mi->map[(int)(ray->pos_x - 1.1 * ray->dir_y * ray->temp_d)]
 		[(int)ray->pos_y] == '0')
 			ray->pos_x -= ray->dir_y * ray->temp_d;
 		if (mi->map[(int)(ray->pos_x)]
-		[(int)(ray->pos_y + 1.5 * ray->dir_x * ray->temp_d)] == '0')
+		[(int)(ray->pos_y + 1.1 * ray->dir_x * ray->temp_d)] == '0')
 			ray->pos_y += ray->dir_x * ray->temp_d;
 	}
 }
